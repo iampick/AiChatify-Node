@@ -40,6 +40,9 @@ router.post('/', async (req, res) => {
     },
   });
 
+  console.log(userId);
+  console.log(last8Chars);
+  console.log(userInDb);
   if (userInDb) {
     conversionId = userInDb.conversionId;
   }
@@ -63,9 +66,6 @@ router.post('/', async (req, res) => {
   connectDify(dataToAi)
     .then(async (response) => {
       // Assuming `response.data` is a stringified JSON that looks like the given output.
-      console.log('------------------');
-      console.log(typeof response);
-      console.log('------------------');
 
       const rawData = response.replace(/\*/g, '');
       const dataParts = rawData
@@ -147,9 +147,6 @@ router.post('/', async (req, res) => {
 async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  console.log('----------');
-  console.log(data_raw);
-  console.log('----------');
 
   // Set up the headers
   const headers = {
@@ -166,22 +163,16 @@ async function connectDify(dataAI) {
     conversation_id: converId,
     user: data_raw.userId,
   };
-  console.log('debug 1');
 
   try {
-    console.log('debug 1.2');
-
     const response = await axios.post(
       'https://api.dify.ai/v1/chat-messages',
       data,
       { headers },
     );
 
-    console.log('debug 2');
     return response.data;
   } catch (error) {
-    console.log('debug 3');
-
     console.error(error);
     let status = 500;
     let message = 'An error occurred while processing your request.';
@@ -195,7 +186,6 @@ async function connectDify(dataAI) {
       // The request was made but no response was received
       message = 'No response was received from the API.';
     }
-    console.log('debug 4');
 
     return message;
   }
