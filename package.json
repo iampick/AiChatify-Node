@@ -9,6 +9,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.19.2"
+    "@prisma/client": "^5.12.1",
+    "axios": "^1.6.8",
+    "express": "^4.19.2",
+    "prisma": "^5.12.1",
+    "xior": "^0.3.12"
   }
 }

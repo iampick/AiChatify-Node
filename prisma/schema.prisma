@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// datasource db {
+//   provider = "sqlite"
+//   url      = "file:../sqlite.db"
+// }
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE")
+  // relationMode = "prisma"
+  // shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model UserConv {
+  id           Int     @id @default(autoincrement())
+  userId       String
+  conversionId String?
+  apiId        String
+
+  @@index([userId], map: "idx_UserConv")
+}
+
+model User {
+    id           Int     @id @default(autoincrement())
+    name        String? 
+    email       String @unique
+
+    @@index([email])
+}
+
+model Project {
+    id          Int     @id @default(autoincrement())
+    userId      Int
+    name        String 
+    serviceId   Int
+    status      String
+    uuid        String
+
+    @@index([userId,uuid,serviceId])
+    @@index([userId])
+    @@index([serviceId])
+
+}
+
+model Service {
+    id          Int     @id @default(autoincrement())
+    userId      Int
+    projectId   Int
+    name        String 
+    @@index([projectId,userId])
+}
