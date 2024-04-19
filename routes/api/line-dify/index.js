@@ -38,6 +38,10 @@ router.post('/', async (req, res) => {
       userId: userId,
       apiId: last8Chars,
     },
+    orderBy: {
+      id: 'desc',
+    },
+    take: 1,
   });
 
   console.log(userId);
