@@ -57,16 +57,6 @@ router.post('/', async (req, res) => {
     conversionId: conversionId,
   });
 
-  let configAi = {
-    method: 'post',
-    maxBodyLength: Infinity,
-    url: `${process.env.API_ENPOINT}/api/dify`,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    data: dataToAi,
-  };
-
   connectDify(dataToAi)
     .then(async (response) => {
       // Assuming `response.data` is a stringified JSON that looks like the given output.
