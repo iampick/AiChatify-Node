@@ -1,17 +1,21 @@
 const axios = require('axios');
-const xior = require('xior');
-
 const express = require('express');
 const router = express.Router();
+
+const getImageBinary = require('../../../utils/getImageBinary');
+const { uploadFile } = require('../../../utils/cloudinary');
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Let's initialize it as null initially, and we will assign the actual database instance later.
-let db = null;
 const config = {
   accessToken: process.env.LINE_ACCESS_TOKEN,
   channelSecret: process.env.LINE_SECRET_TOKEN,
+};
+
+const LineHeader = {
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${config.accessToken}`,
 };
 
 // console.log(client);
@@ -21,17 +25,43 @@ router.get('/', (req, res) => {
 
 router.post('/', async (req, res) => {
   const data_raw = req.body;
-
+  let retrieveMsg = '';
+  let imageParts = '';
+  let files = [];
+  let retrieveImage = '';
   console.log(data_raw);
   // return res.status(200).json({ message: 'Hello API from GET' });
 
   const replyToken = data_raw.events[0].replyToken;
-  const retrieveMsg = data_raw.events[0].message.text;
   const userId = data_raw.events[0].source.userId;
   const messageType = data_raw.events[0].message.type;
+  const messageId = data_raw.events[0].message.id;
+
   let conversionId = '';
-  console.log(data_raw.events[0].message);
+  // console.log(messageType);
+  if (messageType === 'text') {
+    retrieveMsg = data_raw.events[0].message.text;
+  } else if (messageType === 'image') {
+    retrieveImage = await getImageBinary(messageId, LineHeader);
+    // const mimeType = 'image/png';
+    const ImgBuff = Buffer.from(retrieveImage).toString('base64');
+    imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
+    retrieveMsg = 'please read this image';
+    console.log(imageParts.url);
+    imageParts = imageParts.url;
+    files = [
+      {
+        type: 'image',
+        transfer_method: 'remote_url',
+        url: imageParts,
+      },
+    ];
+  }
+  // console.log(data_raw.events[0].message);
+  // console.log(files);
+
   const last8Chars = process.env.DIFY_API_KEY.slice(-8);
+
   // Query to get all todos from the "todo" table
   const userInDb = await prisma.UserConv.findFirst({
     where: {
@@ -44,9 +74,9 @@ router.post('/', async (req, res) => {
     take: 1,
   });
 
-  console.log(userId);
-  console.log(last8Chars);
-  console.log(userInDb);
+  // console.log(userId);
+  // console.log(last8Chars);
+  // console.log(userInDb);
   if (userInDb) {
     conversionId = userInDb.conversionId;
   }
@@ -55,7 +85,10 @@ router.post('/', async (req, res) => {
     message: retrieveMsg,
     userId: userId,
     conversionId: conversionId,
+    files: files,
   });
+
+  // console.log(dataToAi);
 
   connectDify(dataToAi)
     .then(async (response) => {
@@ -95,8 +128,37 @@ router.post('/', async (req, res) => {
       const converIdString = converId.join(); // This will use comma as the default separator
 
       // Combine unique answers into a single string
-      const combinedAnswer = extractedData.answers.join(''); // Join with spaces
+      console.log('-------');
+      console.log(extractedData.answers.length);
+      let no = 0;
+      let answerLenght = false;
+      extractedData.answers.map((txt) => {
+        no++;
+        if (txt.length > 50) {
+          answerLenght = true;
+          console.log('answerLenght true -------');
+        }
+        return console.log(`${no} => ${txt}`);
+      });
+      console.log('-------');
 
+      console.log(extractedData.answers[extractedData.answers.length - 2]);
+      let combinedAnswer = '';
+      if (answerLenght) {
+        combinedAnswer = extractedData.answers[
+          extractedData.answers.length - 2
+        ].replace('Final Answer:', '');
+      } else {
+        combinedAnswer = extractedData.answers
+          .join('')
+          .replace('Final Answer:', ''); // Join with spaces
+      }
+
+      // const combinedAnswer = extractedData.answers
+      //   .map((text) => {
+      //     if (text.length > 10) return text;
+      //   })
+      //   .join('');
       if (conversionId === '') {
         const result = await prisma.userConv.create({
           data: {
@@ -106,15 +168,15 @@ router.post('/', async (req, res) => {
           },
         });
       }
-
-      console.log(combinedAnswer);
+      const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
+      console.log(cleanAnswer);
 
       const data = {
         replyToken,
         messages: [
           {
             type: 'text',
-            text: combinedAnswer,
+            text: cleanAnswer,
           },
         ],
       };
@@ -141,7 +203,6 @@ router.post('/', async (req, res) => {
 async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-
   // Set up the headers
   const headers = {
     Authorization: `Bearer ${api_key}`,
@@ -150,13 +211,26 @@ async function connectDify(dataAI) {
 
   let converId = data_raw.conversionId !== '' ? data_raw.conversionId : '';
   // Hard-coded data
-  const data = {
-    inputs: {},
-    query: data_raw.message,
-    response_mode: 'streaming',
-    conversation_id: converId,
-    user: data_raw.userId,
-  };
+  let data = '';
+  if (data_raw.files != '') {
+    data = {
+      inputs: {},
+      query: data_raw.message.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+      files: data_raw.files,
+    };
+  } else {
+    data = {
+      inputs: {},
+      query: data_raw.message.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+    };
+  }
+  console.log(data);
 
   try {
     const response = await axios.post(
