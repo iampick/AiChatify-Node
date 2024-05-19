@@ -10,9 +10,11 @@ app.get('/', (req, res) => {
 
 // Include route files
 const lineDifyAgent = require('./routes/api/line-dify-agent');
-
+const FbDifyAgent = require('./routes/api/facebook-dify');
 // Use routes
 app.use('/line-dify-agent', lineDifyAgent);
+app.use('/facebook-dify-agent', FbDifyAgent);
+
 // Example specifying the port and starting the server
 const port = process.env.PORT || 3000; // You can use environment variables for port configuration
 app.listen(port, () => {
