@@ -24,6 +24,11 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', async (req, res) => {
+  if (process.env.LINE_BOT !== 'on') {
+    res.status(200).json({ message: 'Hello API' });
+    return true;
+  }
+
   const data_raw = req.body;
   let retrieveMsg = '';
   let imageParts = '';

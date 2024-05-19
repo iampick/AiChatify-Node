@@ -7,6 +7,7 @@ const { uploadFile } = require('../../../utils/cloudinary');
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { sendMessage, setTypingOff, setTypingOn } = require('./messengerApi');
 
 const config = {
   accessToken: process.env.LINE_ACCESS_TOKEN,
@@ -20,45 +21,51 @@ const LineHeader = {
 
 // console.log(client);
 router.get('/', (req, res) => {
-  res.status(200).json({ message: 'Hello API from GET' });
+  let mode = req.query['hub.mode'];
+  let token = req.query['hub.verify_token'];
+  let challenge = req.query['hub.challenge'];
+  if (mode && token) {
+    if (mode === 'subscribe' && token === process.env.FB_VERIFY_TOEKN) {
+      console.log('WEBHOOK_VERIFIED');
+      res.status(200).send(challenge);
+    } else {
+      res.sendStatus(403);
+    }
+  }
 });
 
 router.post('/', async (req, res) => {
+  if (process.env.FACEBOOK_BOT !== 'on') {
+    res.status(200).json({ message: 'Hello API' });
+    return true;
+  }
+
   const data_raw = req.body;
   let retrieveMsg = '';
   let imageParts = '';
   let files = [];
   let retrieveImage = '';
-  console.log(data_raw);
+  let userId = '';
+  let senderId = '';
+  // console.log(data_raw);
   // return res.status(200).json({ message: 'Hello API from GET' });
 
-  const replyToken = data_raw.events[0].replyToken;
-  const userId = data_raw.events[0].source.userId;
-  const messageType = data_raw.events[0].message.type;
-  const messageId = data_raw.events[0].message.id;
+  try {
+    let body = req.body;
+    senderId = body.entry[0].messaging[0].sender.id;
+    userId = senderId;
+
+    retrieveMsg = body.entry[0].messaging[0].message.text;
+    const host = req.hostname;
+    let requestUrl = `https://${host}/sendMessage`;
+    // callSendMessage(requestUrl, senderId, query);
+    // console.log(senderId, query);
+    console.log(body.entry[0].messaging[0]);
+  } catch (error) {
+    console.log(error);
+  }
 
   let conversionId = '';
-  // console.log(messageType);
-  if (messageType === 'text') {
-    retrieveMsg = data_raw.events[0].message.text;
-  } else if (messageType === 'image') {
-    retrieveImage = await getImageBinary(messageId, LineHeader);
-    // const mimeType = 'image/png';
-    const ImgBuff = Buffer.from(retrieveImage).toString('base64');
-    imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
-    retrieveMsg = 'please read this image';
-    console.log(imageParts.url);
-    imageParts = imageParts.url;
-    files = [
-      {
-        type: 'image',
-        transfer_method: 'remote_url',
-        url: imageParts,
-      },
-    ];
-  }
-  // console.log(data_raw.events[0].message);
-  // console.log(files);
 
   const last8Chars = process.env.DIFY_API_KEY.slice(-8);
 
@@ -89,7 +96,7 @@ router.post('/', async (req, res) => {
   });
 
   console.log(dataToAi);
-
+  await setTypingOn(senderId);
   connectDify(dataToAi)
     .then(async (response) => {
       // Assuming `response.data` is a stringified JSON that looks like the given output.
@@ -141,26 +148,8 @@ router.post('/', async (req, res) => {
       }
 
       console.log(combinedAnswer);
-
-      const data = {
-        replyToken,
-        messages: [
-          {
-            type: 'text',
-            text: combinedAnswer,
-          },
-        ],
-      };
-      const Lineresponse = await axios.post(
-        'https://api.line.me/v2/bot/message/reply',
-        data,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.accessToken}`,
-          },
-        },
-      );
+      await sendMessage(senderId, combinedAnswer);
+      await setTypingOff(senderId);
     })
     .catch((error) => {
       console.log(error);
