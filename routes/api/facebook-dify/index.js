@@ -47,6 +47,7 @@ router.post('/', async (req, res) => {
   let retrieveImage = '';
   let userId = '';
   let senderId = '';
+
   // console.log(data_raw);
   // return res.status(200).json({ message: 'Hello API from GET' });
 
@@ -55,16 +56,35 @@ router.post('/', async (req, res) => {
     senderId = body.entry[0].messaging[0].sender.id;
     userId = senderId;
 
-    retrieveMsg = body.entry[0].messaging[0].message.text;
-    const host = req.hostname;
-    let requestUrl = `https://${host}/sendMessage`;
+    // retrieveMsg = body.entry[0].messaging[0].message.text;
+    retrieveMsg = await findTextAndUrl(body).text;
+    imageParts = await findTextAndUrl(body).url;
+
+    if (imageParts !== '') {
+      files = [
+        {
+          type: 'image',
+          transfer_method: 'remote_url',
+          url: imageParts,
+          upload_file_id: '',
+        },
+      ];
+    }
+    // const host = req.hostname;
+    // let requestUrl = `https://${host}/sendMessage`;
     // callSendMessage(requestUrl, senderId, query);
     // console.log(senderId, query);
-    console.log(body.entry[0].messaging[0]);
+    // console.log(body.entry[0].messaging[0]);
+
+    // // logTextAndUrl(body);
+    // console.log(findTextAndUrl(body).url);
+    // console.log(findTextAndUrl(body).text);
   } catch (error) {
     console.log(error);
   }
+  // res.status(200).json({ message: 'Hello API' });
 
+  // return true;
   let conversionId = '';
 
   const last8Chars = process.env.DIFY_API_KEY.slice(-8);
@@ -95,7 +115,12 @@ router.post('/', async (req, res) => {
     files: files,
   });
 
-  console.log(dataToAi);
+  // console.log(dataToAi);
+
+  // res.status(200).json({ message: 'Hello API' });
+
+  // return true;
+
   await setTypingOn(senderId);
   connectDify(dataToAi)
     .then(async (response) => {
@@ -147,7 +172,7 @@ router.post('/', async (req, res) => {
         });
       }
 
-      console.log(combinedAnswer);
+      // console.log(combinedAnswer);
       await sendMessage(senderId, combinedAnswer);
       await setTypingOff(senderId);
     })
@@ -171,15 +196,30 @@ async function connectDify(dataAI) {
   };
 
   let converId = data_raw.conversionId !== '' ? data_raw.conversionId : '';
-  // Hard-coded data
-  const data = {
-    inputs: {},
-    query: data_raw.message,
-    response_mode: 'streaming',
-    conversation_id: converId,
-    user: data_raw.userId,
-  };
 
+  const query =
+    data_raw.message !== '' ? data_raw.message : 'Please wait for question';
+  // Hard-coded data
+  let data = '';
+  if (data_raw.files != '') {
+    data = {
+      inputs: {},
+      query: query.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+      files: data_raw.files,
+    };
+  } else {
+    data = {
+      inputs: {},
+      query: query.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+    };
+  }
+  // console.log(data);
   try {
     const response = await axios.post(
       'https://api.dify.ai/v1/chat-messages',
@@ -207,5 +247,71 @@ async function connectDify(dataAI) {
   }
 }
 
+function logRecursive(obj, depth = 0) {
+  const indent = ' '.repeat(depth * 2); // Indentation for better readability
+
+  if (Array.isArray(obj)) {
+    console.log(indent + '[');
+    obj.forEach((item, index) => {
+      console.log(indent + '  ' + index + ':');
+      logRecursive(item, depth + 1);
+    });
+    console.log(indent + ']');
+  } else if (obj !== null && typeof obj === 'object') {
+    console.log(indent + '{');
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        console.log(indent + '  ' + key + ':');
+        logRecursive(obj[key], depth + 1);
+      }
+    }
+    console.log(indent + '}');
+  } else {
+    console.log(indent + obj);
+  }
+}
 // export the router module so that server.js file can use it
 module.exports = router;
+
+function logTextAndUrl(obj) {
+  if (Array.isArray(obj)) {
+    obj.forEach((item) => logTextAndUrl(item));
+  } else if (obj !== null && typeof obj === 'object') {
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        if (key === 'text') {
+          console.log('text:', obj[key]);
+        } else if (key === 'url') {
+          console.log('url:', obj[key]);
+        } else {
+          logTextAndUrl(obj[key]);
+        }
+      }
+    }
+  }
+}
+
+function findTextAndUrl(obj) {
+  let result = { text: '', url: '' };
+
+  function recursiveSearch(obj) {
+    if (Array.isArray(obj)) {
+      obj.forEach((item) => recursiveSearch(item));
+    } else if (obj !== null && typeof obj === 'object') {
+      for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          if (key === 'url' && !result.url) {
+            result.url = obj[key];
+          } else if (key === 'text' && !result.text) {
+            result.text = obj[key];
+          } else {
+            recursiveSearch(obj[key]);
+          }
+        }
+      }
+    }
+  }
+
+  recursiveSearch(obj);
+  return result;
+}

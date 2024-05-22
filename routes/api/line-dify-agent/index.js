@@ -51,7 +51,7 @@ router.post('/', async (req, res) => {
     // const mimeType = 'image/png';
     const ImgBuff = Buffer.from(retrieveImage).toString('base64');
     imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
-    retrieveMsg = 'please read this image';
+    retrieveMsg = 'Please wait for question';
     console.log(imageParts.url);
     imageParts = imageParts.url;
     files = [
@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
         type: 'image',
         transfer_method: 'remote_url',
         url: imageParts,
+        upload_file_id: '',
       },
     ];
   }
@@ -174,7 +175,7 @@ router.post('/', async (req, res) => {
         });
       }
       const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
-      console.log(cleanAnswer);
+      // console.log(cleanAnswer);
 
       const data = {
         replyToken,
