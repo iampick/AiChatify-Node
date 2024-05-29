@@ -17,8 +17,25 @@ model UserConv {
   userId       String
   conversionId String?
   apiId        String
+  isRead       Boolean  @default(false)
+  status       String  @default("active")
+  updateAt    DateTime   @default(now())
 
   @@index([userId], map: "idx_UserConv")
+  @@index([userId,apiId])
+}
+
+model ChatHistory {
+    id           Int     @id @default(autoincrement())
+    userId       String
+    apiId        String
+    sender       String   @db.VarChar(10)
+    msg          String 
+    filePath     String?
+    createAt     DateTime   @default(now())
+
+    @@index([createAt])
+    @@index([userId,apiId])
 }
 
 model User {

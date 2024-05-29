@@ -66,13 +66,13 @@ router.post('/', async (req, res) => {
   // console.log(data_raw.events[0].message);
   // console.log(files);
 
-  const last8Chars = process.env.DIFY_API_KEY.slice(-8);
+  const last10Chars = process.env.DIFY_API_KEY.slice(-10);
 
   // Query to get all todos from the "todo" table
   const userInDb = await prisma.UserConv.findFirst({
     where: {
       userId: userId,
-      apiId: last8Chars,
+      apiId: last10Chars,
     },
     orderBy: {
       id: 'desc',
@@ -81,7 +81,7 @@ router.post('/', async (req, res) => {
   });
 
   // console.log(userId);
-  // console.log(last8Chars);
+  // console.log(last10Chars);
   // console.log(userInDb);
   if (userInDb) {
     conversionId = userInDb.conversionId;
@@ -139,6 +139,7 @@ router.post('/', async (req, res) => {
       let no = 0;
       let answerLenght = false;
       extractedData.answers.map((txt) => {
+        answerLenght = false;
         no++;
         if (txt.length > 50) {
           answerLenght = true;
@@ -170,12 +171,13 @@ router.post('/', async (req, res) => {
           data: {
             userId: userId,
             conversionId: converIdString,
-            apiId: last8Chars,
+            apiId: last10Chars,
           },
         });
       }
       const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
-      // console.log(cleanAnswer);
+      console.log('cleanAnswer');
+      console.log(cleanAnswer);
 
       const data = {
         replyToken,
