@@ -12,8 +12,10 @@ app.get('/', (req, res) => {
 const lineDifyAgent = require('./routes/api/line-dify-agent');
 const lineOpenAiAgent = require('./routes/api/line-openai-agent');
 const FbDifyAgent = require('./routes/api/facebook-dify');
+const lineEx10DifyAgent = require('./routes/api/line-ex10-dify-agent');
 // Use routes
 app.use('/line-dify-agent', lineDifyAgent);
+app.use('/line-ex10-dify-agent', lineEx10DifyAgent);
 app.use('/line-openai-agent', lineOpenAiAgent);
 app.use('/facebook-dify-agent', FbDifyAgent);
 
