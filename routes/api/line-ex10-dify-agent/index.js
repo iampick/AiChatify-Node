@@ -179,7 +179,7 @@ router.post('/', async (req, res) => {
       console.log('cleanAnswer');
       console.log(cleanAnswer);
 
-      res.status(200).json({
+      return res.status(200).json({
         messages: [
           {
             type: 'text',
@@ -187,14 +187,13 @@ router.post('/', async (req, res) => {
           },
         ],
       });
-      return true;
     })
     .catch((error) => {
       console.log(error);
     });
 
   // console.log(JSON.stringify(response.data, null, 4));
-  res.status(200).json({ message: 'Hello API from POST' });
+  // res.status(200).json({ message: 'Hello API from POST' });
   // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
 });
 
@@ -255,6 +254,7 @@ async function connectDify(dataAI) {
 
     return message;
   }
+  // return message;
 }
 
 // export the router module so that server.js file can use it
