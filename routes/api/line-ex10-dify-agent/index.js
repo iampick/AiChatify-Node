@@ -179,7 +179,14 @@ router.post('/', async (req, res) => {
       console.log('cleanAnswer');
       console.log(cleanAnswer);
 
-      res.status(200).json({ message: cleanAnswer });
+      res.status(200).json({
+        messages: [
+          {
+            type: 'text',
+            text: cleanAnswer,
+          },
+        ],
+      });
       return true;
     })
     .catch((error) => {
