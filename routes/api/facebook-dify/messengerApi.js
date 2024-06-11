@@ -7,7 +7,7 @@ const PAGE_ID = process.env.FB_PAGE_ID;
 const sendMessage = async (senderId, message) => {
   let options = {
     method: 'POST',
-    url: `https://graph.facebook.com/v17.0/${PAGE_ID}/messages`,
+    url: `https://graph.facebook.com/v19.0/${PAGE_ID}/messages`,
     params: {
       access_token: TOKEN,
     },
@@ -31,7 +31,7 @@ const sendMessage = async (senderId, message) => {
 const setTypingOn = async (senderId) => {
   let options = {
     method: 'POST',
-    url: `https://graph.facebook.com/v17.0/${PAGE_ID}/messages`,
+    url: `https://graph.facebook.com/v19.0/${PAGE_ID}/messages`,
     params: {
       access_token: TOKEN,
     },
@@ -52,7 +52,7 @@ const setTypingOn = async (senderId) => {
 const setTypingOff = async (senderId) => {
   let options = {
     method: 'POST',
-    url: `https://graph.facebook.com/v17.0/${PAGE_ID}/messages`,
+    url: `https://graph.facebook.com/v19.0/${PAGE_ID}/messages`,
     params: {
       access_token: TOKEN,
     },
