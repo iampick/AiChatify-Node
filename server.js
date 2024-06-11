@@ -1,11 +1,21 @@
 // Example using Express.js
 const express = require('express');
+const path = require('path');
 const app = express();
 app.use(express.json());
 const router = express.Router();
 // Example defining a route in Express
+
+// View Engine Setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
 app.get('/', (req, res) => {
-  res.send('<h1>Hello, Express.js Server!</h1>');
+  // Rendering our web page i.e. Demo.ejs
+  // and passing title variable through it
+  res.render('privacy', {
+    title: 'Privacy Policy',
+  });
 });
 
 // Include route files
