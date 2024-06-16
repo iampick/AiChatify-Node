@@ -20,6 +20,11 @@ app.get('/privacy', (req, res) => {
     title: 'Privacy Policy',
   });
 });
+app.get('/business-profile', (req, res) => {
+  res.render('business-profile', {
+    title: 'Business Profile - Narinthorn Inthararin',
+  });
+});
 
 // Include route files
 const lineDifyAgent = require('./routes/api/line-dify-agent');
