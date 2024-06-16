@@ -6,13 +6,16 @@ app.use(express.json());
 const router = express.Router();
 // Example defining a route in Express
 
+app.get('/', (req, res) => {
+  res.send('<h1>Hello, Express.js Server!</h1>');
+});
+
 // View Engine Setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.get('/', (req, res) => {
-  // Rendering our web page i.e. Demo.ejs
-  // and passing title variable through it
+// Route for Privacy Policy
+app.get('/privacy', (req, res) => {
   res.render('privacy', {
     title: 'Privacy Policy',
   });
