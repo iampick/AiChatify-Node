@@ -31,11 +31,13 @@ const lineDifyAgent = require('./routes/api/line-dify-agent');
 const lineOpenAiAgent = require('./routes/api/line-openai-agent');
 const FbDifyAgent = require('./routes/api/facebook-dify');
 const lineEx10DifyAgent = require('./routes/api/line-ex10-dify-agent');
+const deleteChat = require('./routes/api/deleteHistory');
 // Use routes
 app.use('/line-dify-agent', lineDifyAgent);
 app.use('/line-ex10-dify-agent', lineEx10DifyAgent);
 app.use('/line-openai-agent', lineOpenAiAgent);
 app.use('/facebook-dify-agent', FbDifyAgent);
+app.use('/deletechat', deleteChat);
 
 // Example specifying the port and starting the server
 const port = process.env.PORT || 3000; // You can use environment variables for port configuration
