@@ -1,4 +1,5 @@
 // Example using Express.js
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const app = express();
@@ -7,7 +8,7 @@ const router = express.Router();
 // Example defining a route in Express
 
 app.get('/', (req, res) => {
-  res.send('<h1>Hello, Express.js Server!</h1>');
+  res.send('<h1>Hello, Express.js Server! +++</h1>');
 });
 
 // View Engine Setup

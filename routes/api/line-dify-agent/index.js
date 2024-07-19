@@ -20,10 +20,17 @@ const LineHeader = {
 
 // console.log(client);
 router.get('/', (req, res) => {
+  console.log(process.env.DIFY_API_KEY);
   res.status(200).json({ message: 'Hello API from GET' });
 });
 
 router.post('/', async (req, res) => {
+  console.log(req.body);
+  //
+  // if (req.body && req.body.destination) {
+  //   res.status(200).json({ message: 'Hello API' });
+  //   return true;
+  // }
   if (process.env.LINE_BOT !== 'on') {
     res.status(200).json({ message: 'Hello API' });
     return true;
@@ -67,6 +74,7 @@ router.post('/', async (req, res) => {
   // console.log(files);
 
   const last10Chars = process.env.DIFY_API_KEY.slice(-10);
+  // const last10Chars = 'app-1k7DZ3qK1PnfmrWfzgIsvVfM'.slice(-10);
 
   // Query to get all todos from the "todo" table
   const userInDb = await prisma.UserConv.findFirst({
@@ -80,8 +88,8 @@ router.post('/', async (req, res) => {
     take: 1,
   });
 
-  // console.log(userId);
-  // console.log(last10Chars);
+  console.log('++++++++++++++++++++');
+  console.log(process.env.DIFY_API_KEY);
   // console.log(userInDb);
   if (userInDb) {
     conversionId = userInDb.conversionId;
@@ -161,11 +169,6 @@ router.post('/', async (req, res) => {
           .replace('Final Answer:', ''); // Join with spaces
       }
 
-      // const combinedAnswer = extractedData.answers
-      //   .map((text) => {
-      //     if (text.length > 10) return text;
-      //   })
-      //   .join('');
       if (conversionId === '') {
         const result = await prisma.userConv.create({
           data: {
@@ -188,6 +191,9 @@ router.post('/', async (req, res) => {
           },
         ],
       };
+      console.log('data');
+      console.log(data);
+
       const Lineresponse = await axios.post(
         'https://api.line.me/v2/bot/message/reply',
         data,
@@ -211,6 +217,7 @@ router.post('/', async (req, res) => {
 async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
+
   // Set up the headers
   const headers = {
     Authorization: `Bearer ${api_key}`,

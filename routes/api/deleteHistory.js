@@ -14,7 +14,9 @@ router.get('/', async (req, res) => {
   }
 
   if (password !== process.env.MASTER_PASSWORD) {
-    return res.status(403).json({ message: 'Forbidden: Incorrect password' });
+    return res.status(403).json({
+      message: `Forbidden: Incorrect password`,
+    });
   }
 
   try {
