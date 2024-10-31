@@ -48,6 +48,8 @@ router.post('/', async (req, res) => {
   if (messageType === 'text') {
     retrieveMsg = data_raw.events[0].message.text;
   } else if (messageType === 'image') {
+    res.status(200).json({ message: 'Hello API' });
+    return true;
     retrieveImage = await getImageBinary(messageId, LineHeader);
     // const mimeType = 'image/png';
     const ImgBuff = Buffer.from(retrieveImage).toString('base64');
