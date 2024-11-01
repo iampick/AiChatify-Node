@@ -54,6 +54,7 @@ router.post('/', async (req, res) => {
   if (messageType === 'text') {
     retrieveMsg = data_raw.events[0].message.text;
   } else if (messageType === 'image') {
+    return;
     retrieveImage = await getImageBinary(messageId, LineHeader);
     // const mimeType = 'image/png';
     const ImgBuff = Buffer.from(retrieveImage).toString('base64');
@@ -69,6 +70,9 @@ router.post('/', async (req, res) => {
         upload_file_id: '',
       },
     ];
+  }
+  if (retrieveImage === '') {
+    return;
   }
   // console.log(data_raw.events[0].message);
   // console.log(files);
