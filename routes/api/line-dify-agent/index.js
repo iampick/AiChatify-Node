@@ -54,7 +54,7 @@ router.post('/', async (req, res) => {
   if (messageType === 'text') {
     retrieveMsg = data_raw.events[0].message.text;
   } else if (messageType === 'image') {
-    return;
+    return true;
     retrieveImage = await getImageBinary(messageId, LineHeader);
     // const mimeType = 'image/png';
     const ImgBuff = Buffer.from(retrieveImage).toString('base64');
@@ -71,12 +71,12 @@ router.post('/', async (req, res) => {
       },
     ];
   }
-  if (retrieveImage === '') {
-    return;
-  }
+
   // console.log(data_raw.events[0].message);
   // console.log(files);
-
+  if (messageType === 'image') {
+    return true;
+  }
   const last10Chars = process.env.DIFY_API_KEY.slice(-10);
   // const last10Chars = 'app-1k7DZ3qK1PnfmrWfzgIsvVfM'.slice(-10);
 
