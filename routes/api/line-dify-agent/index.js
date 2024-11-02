@@ -210,7 +210,7 @@ router.post('/', async (req, res) => {
       );
     })
     .catch((error) => {
-      console.log(error);
+      logRecursive(error);
     });
 
   // console.log(JSON.stringify(response.data, null, 4));
@@ -278,5 +278,28 @@ async function connectDify(dataAI) {
   }
 }
 
+function logRecursive(obj, depth = 0) {
+  const indent = ' '.repeat(depth * 2); // Indentation for better readability
+
+  if (Array.isArray(obj)) {
+    console.log(indent + '[');
+    obj.forEach((item, index) => {
+      console.log(indent + '  ' + index + ':');
+      logRecursive(item, depth + 1);
+    });
+    console.log(indent + ']');
+  } else if (obj !== null && typeof obj === 'object') {
+    console.log(indent + '{');
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        console.log(indent + '  ' + key + ':');
+        logRecursive(obj[key], depth + 1);
+      }
+    }
+    console.log(indent + '}');
+  } else {
+    console.log(indent + obj);
+  }
+}
 // export the router module so that server.js file can use it
 module.exports = router;
