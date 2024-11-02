@@ -18,7 +18,7 @@ const LineHeader = {
   'Content-Type': 'application/json',
   Authorization: `Bearer ${config.accessToken}`,
 };
-let prismaIdx;
+
 // console.log(client);
 router.get('/', (req, res) => {
   console.log(process.env.DIFY_API_KEY);
@@ -103,9 +103,10 @@ router.post(
       await waitForStandby(userId, last10Chars);
 
       conversionId = userInDb.conversionId;
-      const updatedRecord = await prisma.userConv.update({
+      const updatedRecord = await prisma.userConv.updateMany({
         where: {
           userId: userId,
+          apiId: last10Chars,
         },
         data: {
           status: 'sending',
@@ -223,9 +224,10 @@ router.post(
             },
           },
         );
-        const updatedRecord = await prisma.userConv.update({
+        const updatedRecord = await prisma.userConv.updateMany({
           where: {
             userId: userId,
+            apiId: last10Chars,
           },
           data: {
             status: 'standby',
