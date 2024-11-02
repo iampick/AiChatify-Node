@@ -244,7 +244,7 @@ async function connectDify(dataAI) {
     data = {
       inputs: {},
       query: data_raw.message.trim(),
-      response_mode: 'blocking',
+      response_mode: 'streaming',
       conversation_id: converId,
       user: data_raw.userId,
     };
