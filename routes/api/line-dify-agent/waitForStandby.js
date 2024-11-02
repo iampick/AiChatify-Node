@@ -15,9 +15,11 @@ function waitForStandby(userId, apiId, interval = 2000) {
     const timer = setInterval(async () => {
       try {
         const userConv = await prisma.UserConv.findFirst({
-          userId_apiId: {
-            userId: userId,
-            apiId: apiId,
+          where: {
+            userId_apiId: {
+              userId: userId,
+              apiId: last10Chars,
+            },
           },
           select: {
             status: true,
