@@ -1,7 +1,7 @@
 const axios = require('axios');
 const express = require('express');
 const router = express.Router();
-
+const bodyParser = require('body-parser');
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
@@ -25,205 +25,84 @@ router.get('/', (req, res) => {
   res.status(200).json({ message: 'Hello API from GET' });
 });
 
-router.post('/', async (req, res) => {
-  console.log(req.body);
-  //
-  // if (req.body && req.body.destination) {
-  //   res.status(200).json({ message: 'Hello API' });
-  //   return true;
-  // }
-  if (process.env.LINE_BOT !== 'on') {
-    res.status(200).json({ message: 'Hello API' });
-    return true;
-  }
+router.post(
+  '/',
+  bodyParser.raw({ type: 'application/json' }),
+  async (req, res) => {
+    console.log(req.body);
+    //
+    // if (req.body && req.body.destination) {
+    //   res.status(200).json({ message: 'Hello API' });
+    //   return true;
+    // }
+    if (process.env.LINE_BOT !== 'on') {
+      res.status(200).json({ message: 'Hello API' });
+      return true;
+    }
 
-  const data_raw = req.body;
-  let retrieveMsg = '';
-  let imageParts = '';
-  let files = [];
-  let retrieveImage = '';
-  console.log(data_raw);
-  // return res.status(200).json({ message: 'Hello API from GET' });
+    const data_raw = req.body;
+    let retrieveMsg = '';
+    let imageParts = '';
+    let files = [];
+    let retrieveImage = '';
+    console.log(data_raw);
+    // return res.status(200).json({ message: 'Hello API from GET' });
 
-  const replyToken = data_raw.events[0].replyToken;
-  const userId = data_raw.events[0].source.userId;
-  const messageType = data_raw.events[0].message.type;
-  const messageId = data_raw.events[0].message.id;
+    const replyToken = data_raw.events[0].replyToken;
+    const userId = data_raw.events[0].source.userId;
+    const messageType = data_raw.events[0].message.type;
+    const messageId = data_raw.events[0].message.id;
 
-  let conversionId = '';
-  // console.log(messageType);
-  if (messageType === 'text') {
-    retrieveMsg = data_raw.events[0].message.text;
-  } else if (messageType === 'image') {
-    return true;
-    retrieveImage = await getImageBinary(messageId, LineHeader);
-    // const mimeType = 'image/png';
-    const ImgBuff = Buffer.from(retrieveImage).toString('base64');
-    imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
-    retrieveMsg = 'Please wait for question';
-    console.log(imageParts.url);
-    imageParts = imageParts.url;
-    files = [
-      {
-        type: 'image',
-        transfer_method: 'remote_url',
-        url: imageParts,
-        upload_file_id: '',
-      },
-    ];
-  }
-
-  // console.log(data_raw.events[0].message);
-  // console.log(files);
-  if (messageType === 'image') {
-    return true;
-  }
-  const last10Chars = process.env.DIFY_API_KEY.slice(-10);
-  // const last10Chars = 'app-1k7DZ3qK1PnfmrWfzgIsvVfM'.slice(-10);
-
-  // Query to get all todos from the "todo" table
-  const userInDb = await prisma.UserConv.findFirst({
-    where: {
-      userId: userId,
-      apiId: last10Chars,
-    },
-    orderBy: {
-      id: 'desc',
-    },
-    take: 1,
-  });
-
-  // console.log('++++++++++++++++++++');
-  // console.log(process.env.DIFY_API_KEY);
-  // console.log(userInDb);
-  if (userInDb) {
-    await waitForStandby(userId, apiId);
-
-    conversionId = userInDb.conversionId;
-    const updatedRecord = await prisma.UserConv.update({
-      where: {
-        userId_apiId: {
-          // The name combines the fields in the order they are defined
-          userId: userId,
-          apiId: last10Chars,
-        },
-      },
-      data: {
-        status: 'sending',
-      },
-    });
-  }
-
-  let dataToAi = JSON.stringify({
-    message: retrieveMsg,
-    userId: userId,
-    conversionId: conversionId,
-    files: files,
-  });
-
-  // console.log(dataToAi);
-
-  connectDify(dataToAi)
-    .then(async (response) => {
-      // Assuming `response.data` is a stringified JSON that looks like the given output.
-
-      const rawData = response.replace(/\*/g, '');
-      const dataParts = rawData
-        .split('\n')
-        .filter((part) => part.startsWith('data:'));
-
-      // Define an object to hold the extracted information.
-      let extractedData = {
-        conversation_ids: new Set(), // Use a Set to avoid duplicate IDs
-        answers: [],
-      };
-
-      // console.log(dataParts.answer);
-      dataParts.forEach((part) => {
-        const jsonPart = part.substring(6); // Remove 'data: ' prefix
-
-        try {
-          const parsedObj = JSON.parse(jsonPart);
-
-          // Add the conversation_id to the Set (duplicates will be ignored)
-          extractedData.conversation_ids.add(parsedObj.conversation_id);
-
-          extractedData.answers.push(parsedObj.answer || ''); // Use empty string if undefined
-        } catch (error) {
-          console.error('Failed to parse JSON:', jsonPart, 'Error:', error);
-          // Handle parse error or continue (e.g., log the error and continue)
-        }
-      });
-
-      // Convert the Set of conversation IDs to an array for easier usage.
-      extractedData.conversation_ids = [...extractedData.conversation_ids];
-      const converId = extractedData.conversation_ids;
-      const converIdString = converId.join(); // This will use comma as the default separator
-
-      // Combine unique answers into a single string
-      console.log('-------');
-      console.log(extractedData.answers.length);
-      let no = 0;
-      let answerLenght = false;
-      extractedData.answers.map((txt) => {
-        answerLenght = false;
-        no++;
-        if (txt.length > 50) {
-          answerLenght = true;
-          console.log('answerLenght true -------');
-        }
-        return console.log(`${no} => ${txt}`);
-      });
-      console.log('-------');
-
-      console.log(extractedData.answers[extractedData.answers.length - 2]);
-      let combinedAnswer = '';
-      if (answerLenght) {
-        combinedAnswer = extractedData.answers[
-          extractedData.answers.length - 2
-        ].replace('Final Answer:', '');
-      } else {
-        combinedAnswer = extractedData.answers
-          .join('')
-          .replace('Final Answer:', ''); // Join with spaces
-      }
-
-      if (conversionId === '') {
-        const result = await prisma.userConv.create({
-          data: {
-            userId: userId,
-            conversionId: converIdString,
-            apiId: last10Chars,
-            status: 'sending',
-          },
-        });
-      }
-      const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
-      console.log('cleanAnswer');
-      console.log(cleanAnswer);
-
-      const data = {
-        replyToken,
-        messages: [
-          {
-            type: 'text',
-            text: cleanAnswer,
-          },
-        ],
-      };
-      console.log('data');
-      console.log(data);
-
-      const Lineresponse = await axios.post(
-        'https://api.line.me/v2/bot/message/reply',
-        data,
+    let conversionId = '';
+    // console.log(messageType);
+    if (messageType === 'text') {
+      retrieveMsg = data_raw.events[0].message.text;
+    } else if (messageType === 'image') {
+      return true;
+      retrieveImage = await getImageBinary(messageId, LineHeader);
+      // const mimeType = 'image/png';
+      const ImgBuff = Buffer.from(retrieveImage).toString('base64');
+      imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
+      retrieveMsg = 'Please wait for question';
+      console.log(imageParts.url);
+      imageParts = imageParts.url;
+      files = [
         {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.accessToken}`,
-          },
+          type: 'image',
+          transfer_method: 'remote_url',
+          url: imageParts,
+          upload_file_id: '',
         },
-      );
+      ];
+    }
+
+    // console.log(data_raw.events[0].message);
+    // console.log(files);
+    if (messageType === 'image') {
+      return true;
+    }
+    const last10Chars = process.env.DIFY_API_KEY.slice(-10);
+    // const last10Chars = 'app-1k7DZ3qK1PnfmrWfzgIsvVfM'.slice(-10);
+
+    // Query to get all todos from the "todo" table
+    const userInDb = await prisma.UserConv.findFirst({
+      where: {
+        userId: userId,
+        apiId: last10Chars,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+      take: 1,
+    });
+
+    // console.log('++++++++++++++++++++');
+    // console.log(process.env.DIFY_API_KEY);
+    // console.log(userInDb);
+    if (userInDb) {
+      await waitForStandby(userId, last10Chars);
+
+      conversionId = userInDb.conversionId;
       const updatedRecord = await prisma.UserConv.update({
         where: {
           userId_apiId: {
@@ -233,18 +112,143 @@ router.post('/', async (req, res) => {
           },
         },
         data: {
-          status: 'standby',
+          status: 'sending',
         },
       });
-    })
-    .catch((error) => {
-      logRecursive(error);
+    }
+
+    let dataToAi = JSON.stringify({
+      message: retrieveMsg,
+      userId: userId,
+      conversionId: conversionId,
+      files: files,
     });
 
-  // console.log(JSON.stringify(response.data, null, 4));
-  res.status(200).json({ message: 'Hello API from POST' });
-  // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
-});
+    // console.log(dataToAi);
+
+    connectDify(dataToAi)
+      .then(async (response) => {
+        // Assuming `response.data` is a stringified JSON that looks like the given output.
+
+        const rawData = response.replace(/\*/g, '');
+        const dataParts = rawData
+          .split('\n')
+          .filter((part) => part.startsWith('data:'));
+
+        // Define an object to hold the extracted information.
+        let extractedData = {
+          conversation_ids: new Set(), // Use a Set to avoid duplicate IDs
+          answers: [],
+        };
+
+        // console.log(dataParts.answer);
+        dataParts.forEach((part) => {
+          const jsonPart = part.substring(6); // Remove 'data: ' prefix
+
+          try {
+            const parsedObj = JSON.parse(jsonPart);
+
+            // Add the conversation_id to the Set (duplicates will be ignored)
+            extractedData.conversation_ids.add(parsedObj.conversation_id);
+
+            extractedData.answers.push(parsedObj.answer || ''); // Use empty string if undefined
+          } catch (error) {
+            console.error('Failed to parse JSON:', jsonPart, 'Error:', error);
+            // Handle parse error or continue (e.g., log the error and continue)
+          }
+        });
+
+        // Convert the Set of conversation IDs to an array for easier usage.
+        extractedData.conversation_ids = [...extractedData.conversation_ids];
+        const converId = extractedData.conversation_ids;
+        const converIdString = converId.join(); // This will use comma as the default separator
+
+        // Combine unique answers into a single string
+        console.log('-------');
+        console.log(extractedData.answers.length);
+        let no = 0;
+        let answerLenght = false;
+        extractedData.answers.map((txt) => {
+          answerLenght = false;
+          no++;
+          if (txt.length > 50) {
+            answerLenght = true;
+            console.log('answerLenght true -------');
+          }
+          return console.log(`${no} => ${txt}`);
+        });
+        console.log('-------');
+
+        console.log(extractedData.answers[extractedData.answers.length - 2]);
+        let combinedAnswer = '';
+        if (answerLenght) {
+          combinedAnswer = extractedData.answers[
+            extractedData.answers.length - 2
+          ].replace('Final Answer:', '');
+        } else {
+          combinedAnswer = extractedData.answers
+            .join('')
+            .replace('Final Answer:', ''); // Join with spaces
+        }
+
+        if (conversionId === '') {
+          const result = await prisma.userConv.create({
+            data: {
+              userId: userId,
+              conversionId: converIdString,
+              apiId: last10Chars,
+              status: 'sending',
+            },
+          });
+        }
+        const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
+        console.log('cleanAnswer');
+        console.log(cleanAnswer);
+
+        const data = {
+          replyToken,
+          messages: [
+            {
+              type: 'text',
+              text: cleanAnswer,
+            },
+          ],
+        };
+        console.log('data');
+        console.log(data);
+
+        const Lineresponse = await axios.post(
+          'https://api.line.me/v2/bot/message/reply',
+          data,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.accessToken}`,
+            },
+          },
+        );
+        const updatedRecord = await prisma.UserConv.update({
+          where: {
+            userId_apiId: {
+              // The name combines the fields in the order they are defined
+              userId: userId,
+              apiId: last10Chars,
+            },
+          },
+          data: {
+            status: 'standby',
+          },
+        });
+      })
+      .catch((error) => {
+        logRecursive(error);
+      });
+
+    // console.log(JSON.stringify(response.data, null, 4));
+    res.status(200).json({ message: 'Hello API from POST' });
+    // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
+  },
+);
 
 async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
