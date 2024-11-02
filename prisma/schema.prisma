@@ -18,7 +18,7 @@ model UserConv {
   conversionId String?
   apiId        String
   isRead       Boolean  @default(false)
-  status       String  @default("active")
+  status       String  @default("standby")
   updateAt    DateTime   @default(now())
 
   @@index([userId], map: "idx_UserConv")

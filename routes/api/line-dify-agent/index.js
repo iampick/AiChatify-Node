@@ -4,6 +4,7 @@ const router = express.Router();
 
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
+const waitForStandby = require('./waitForStandby');
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -92,11 +93,25 @@ router.post('/', async (req, res) => {
     take: 1,
   });
 
-  console.log('++++++++++++++++++++');
-  console.log(process.env.DIFY_API_KEY);
+  // console.log('++++++++++++++++++++');
+  // console.log(process.env.DIFY_API_KEY);
   // console.log(userInDb);
   if (userInDb) {
+    await waitForStandby(userId, apiId);
+
     conversionId = userInDb.conversionId;
+    const updatedRecord = await prisma.UserConv.update({
+      where: {
+        userId_apiId: {
+          // The name combines the fields in the order they are defined
+          userId: userId,
+          apiId: last10Chars,
+        },
+      },
+      data: {
+        status: 'sending',
+      },
+    });
   }
 
   let dataToAi = JSON.stringify({
@@ -179,6 +194,7 @@ router.post('/', async (req, res) => {
             userId: userId,
             conversionId: converIdString,
             apiId: last10Chars,
+            status: 'sending',
           },
         });
       }
@@ -208,6 +224,18 @@ router.post('/', async (req, res) => {
           },
         },
       );
+      const updatedRecord = await prisma.UserConv.update({
+        where: {
+          userId_apiId: {
+            // The name combines the fields in the order they are defined
+            userId: userId,
+            apiId: last10Chars,
+          },
+        },
+        data: {
+          status: 'standby',
+        },
+      });
     })
     .catch((error) => {
       logRecursive(error);
