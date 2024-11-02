@@ -22,7 +22,7 @@ model UserConv {
   updateAt    DateTime   @default(now())
 
   @@index([userId], map: "idx_UserConv")
-  @@unique([userId, apiId])
+  @@unique([userId, apiId], name: "userId_apiId")
 }
 
 model ChatHistory {

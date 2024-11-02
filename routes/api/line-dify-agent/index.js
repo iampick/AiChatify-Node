@@ -87,10 +87,8 @@ router.post(
     // Query to get all todos from the "todo" table
     const userInDb = await prisma.UserConv.findFirst({
       where: {
-        userId_apiId: {
-          userId: userId,
-          apiId: last10Chars,
-        },
+        userId: userId,
+        apiId: last10Chars,
       },
       orderBy: {
         id: 'desc',
