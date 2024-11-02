@@ -87,8 +87,10 @@ router.post(
     // Query to get all todos from the "todo" table
     const userInDb = await prisma.UserConv.findFirst({
       where: {
-        userId: userId,
-        apiId: last10Chars,
+        userId_apiId: {
+          userId: userId,
+          apiId: last10Chars,
+        },
       },
       orderBy: {
         id: 'desc',
@@ -103,10 +105,9 @@ router.post(
       await waitForStandby(userId, last10Chars);
 
       conversionId = userInDb.conversionId;
-      const updatedRecord = await prisma.UserConv.update({
+      const updatedRecord = await prisma.userConv.update({
         where: {
           userId_apiId: {
-            // The name combines the fields in the order they are defined
             userId: userId,
             apiId: last10Chars,
           },
@@ -227,10 +228,9 @@ router.post(
             },
           },
         );
-        const updatedRecord = await prisma.UserConv.update({
+        const updatedRecord = await prisma.userConv.update({
           where: {
             userId_apiId: {
-              // The name combines the fields in the order they are defined
               userId: userId,
               apiId: last10Chars,
             },
