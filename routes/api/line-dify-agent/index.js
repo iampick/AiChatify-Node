@@ -74,6 +74,8 @@ router.post(
           upload_file_id: '',
         },
       ];
+    } else {
+      return true;
     }
 
     // console.log(data_raw.events[0].message);
