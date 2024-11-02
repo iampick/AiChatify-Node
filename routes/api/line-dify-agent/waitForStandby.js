@@ -19,10 +19,6 @@ function waitForStandby(userId, apiId, interval = 2000) {
             userId: userId,
             apiId: apiId,
           },
-          userId_apiId: {
-            userId: userId,
-            apiId: apiId,
-          },
           select: {
             status: true,
           },

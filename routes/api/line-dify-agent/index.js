@@ -237,9 +237,11 @@ router.post(
             status: 'standby',
           },
         });
+
+        console.log(updatedRecord);
       })
       .catch((error) => {
-        logRecursive(error);
+        console.log(error);
       });
 
     // console.log(JSON.stringify(response.data, null, 4));
