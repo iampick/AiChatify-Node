@@ -105,10 +105,8 @@ router.post(
       conversionId = userInDb.conversionId;
       const updatedRecord = await prisma.userConv.update({
         where: {
-          userId_apiId: {
-            userId: userId,
-            apiId: last10Chars,
-          },
+          userId: userId,
+          apiId: last10Chars,
         },
         data: {
           status: 'sending',
@@ -228,10 +226,8 @@ router.post(
         );
         const updatedRecord = await prisma.userConv.update({
           where: {
-            userId_apiId: {
-              userId: userId,
-              apiId: last10Chars,
-            },
+            userId: userId,
+            apiId: last10Chars,
           },
           data: {
             status: 'standby',
