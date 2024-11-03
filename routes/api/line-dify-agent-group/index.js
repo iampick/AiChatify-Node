@@ -2,19 +2,20 @@ const axios = require('axios');
 const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
+const { v4: uuidv4 } = require('uuid');
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
-
+const uuid = uuidv4();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const config = {
-  accessToken: process.env.LINE_GROUP_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_GROUP_SECRET_TOKEN,
+  accessToken: process.env.LINE_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_SECRET_TOKEN,
 };
 
-const LineHeader = {
+let LineHeader = {
   'Content-Type': 'application/json',
   Authorization: `Bearer ${config.accessToken}`,
 };
@@ -29,9 +30,7 @@ router.post(
   '/',
   bodyParser.raw({ type: 'application/json' }),
   async (req, res) => {
-    logRecursive(req.body);
-
-    return true;
+    // console.log(req.body);
     //
     // if (req.body && req.body.destination) {
     //   res.status(200).json({ message: 'Hello API' });
@@ -47,16 +46,36 @@ router.post(
     let imageParts = '';
     let files = [];
     let retrieveImage = '';
-    console.log(data_raw);
+    let eventType = '';
+    let userId = '';
+    let lineEndPoint;
+    // logRecursive(data_raw);
+    // return true;
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
-    const userId = data_raw.events[0].source.userId;
+    const sourceType = data_raw.events[0].source.type;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
-
+    eventType = data_raw.events[0].type ? data_raw.events[0].type : null;
     let conversionId = '';
+
+    if (sourceType === 'user') {
+      userId = data_raw.events[0].source.userId;
+      lineEndPoint = 'https://api.line.me/v2/bot/message/reply';
+    } else if (sourceType === 'group') {
+      userId = data_raw.events[0].source.groupId;
+      lineEndPoint = 'https://api.line.me/v2/bot/message/push';
+      LineHeader = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.accessToken}`,
+      };
+    }
     // console.log(messageType);
+    if (eventType === 'leave') {
+      return true;
+    }
+
     if (messageType === 'text') {
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
@@ -206,28 +225,38 @@ router.post(
         console.log('cleanAnswer');
         console.log(cleanAnswer);
 
-        const data = {
-          replyToken,
-          messages: [
-            {
-              type: 'text',
-              text: cleanAnswer,
-            },
-          ],
-        };
+        if (sourceType === 'user') {
+          const data = {
+            replyToken,
+            messages: [
+              {
+                type: 'text',
+                text: cleanAnswer,
+              },
+            ],
+          };
+        } else if (sourceType === 'group') {
+          const data = {
+            to: userId,
+            messages: [
+              {
+                type: 'text',
+                text: cleanAnswer,
+              },
+            ],
+          };
+        }
+
         console.log('data');
         console.log(data);
 
-        const Lineresponse = await axios.post(
-          'https://api.line.me/v2/bot/message/reply',
-          data,
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${config.accessToken}`,
-            },
+        const Lineresponse = await axios.post(lineEndPoint, data, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.accessToken}`,
           },
-        );
+        });
+
         const updatedRecord = await prisma.userConv.updateMany({
           where: {
             userId: userId,
