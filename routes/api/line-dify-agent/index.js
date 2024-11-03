@@ -53,7 +53,7 @@ router.post(
     const userId = data_raw.events[0].source.userId;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
-    eventType = data_raw.events[0].type ? data_raw.events[0].type : null;
+    eventType = data_raw.events[0].type;
     let conversionId = '';
     // console.log(messageType);
     if (eventType === 'leave') {
