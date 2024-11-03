@@ -29,12 +29,15 @@ app.get('/business-profile', (req, res) => {
 
 // Include route files
 const lineDifyAgent = require('./routes/api/line-dify-agent');
+const lineDifyGroup = require('./routes/api/line-dify-agent-group');
 const lineOpenAiAgent = require('./routes/api/line-openai-agent');
 const FbDifyAgent = require('./routes/api/facebook-dify');
 const lineEx10DifyAgent = require('./routes/api/line-ex10-dify-agent');
 const deleteChat = require('./routes/api/deleteHistory');
+
 // Use routes
 app.use('/line-dify-agent', lineDifyAgent);
+app.use('/line-dify-group', lineDifyGroup);
 app.use('/line-ex10-dify-agent', lineEx10DifyAgent);
 app.use('/line-openai-agent', lineOpenAiAgent);
 app.use('/facebook-dify-agent', FbDifyAgent);

@@ -10,8 +10,8 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const config = {
-  accessToken: process.env.LINE_ACCESS_TOKEN,
-  channelSecret: process.env.LINE_SECRET_TOKEN,
+  accessToken: process.env.LINE_GROUP_ACCESS_TOKEN,
+  channelSecret: process.env.LINE_GROUP_SECRET_TOKEN,
 };
 
 const LineHeader = {
@@ -29,7 +29,9 @@ router.post(
   '/',
   bodyParser.raw({ type: 'application/json' }),
   async (req, res) => {
-    console.log(req.body);
+    logRecursive(req.body);
+
+    return true;
     //
     // if (req.body && req.body.destination) {
     //   res.status(200).json({ message: 'Hello API' });
@@ -45,7 +47,6 @@ router.post(
     let imageParts = '';
     let files = [];
     let retrieveImage = '';
-    let eventType = '';
     console.log(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
@@ -53,13 +54,9 @@ router.post(
     const userId = data_raw.events[0].source.userId;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
-    eventType = data_raw.events[0].type;
+
     let conversionId = '';
     // console.log(messageType);
-    if (eventType === 'leave') {
-      return true;
-    }
-
     if (messageType === 'text') {
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
