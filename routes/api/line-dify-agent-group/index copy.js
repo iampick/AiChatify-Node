@@ -3,11 +3,10 @@ const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
-const uuid = uuidv4();
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
-
+const uuid = uuidv4();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -16,7 +15,7 @@ const config = {
   channelSecret: process.env.LINE_SECRET_TOKEN,
 };
 
-const LineHeader = {
+let LineHeader = {
   'Content-Type': 'application/json',
   Authorization: `Bearer ${config.accessToken}`,
 };
@@ -31,7 +30,7 @@ router.post(
   '/',
   bodyParser.raw({ type: 'application/json' }),
   async (req, res) => {
-    console.log(req.body);
+    // console.log(req.body);
     //
     // if (req.body && req.body.destination) {
     //   res.status(200).json({ message: 'Hello API' });
@@ -51,7 +50,8 @@ router.post(
     let userId = '';
     let lineEndPoint;
     let lineData;
-
+    logRecursive(data_raw);
+    // return true;
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
@@ -60,7 +60,6 @@ router.post(
     const messageId = data_raw.events[0].message.id;
     eventType = data_raw.events[0].type ? data_raw.events[0].type : null;
     let conversionId = '';
-    // console.log(messageType);
 
     if (sourceType === 'user') {
       userId = data_raw.events[0].source.userId;
@@ -71,15 +70,9 @@ router.post(
       LineHeader = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.accessToken}`,
-        'X-Line-Retry-Key': uuid,
       };
     }
-    console.log(replyToken);
-    console.log(sourceType);
-    console.log(messageType);
-    console.log(userId);
-    console.log(lineEndPoint);
-
+    // console.log(messageType);
     if (eventType === 'leave') {
       return true;
     }
