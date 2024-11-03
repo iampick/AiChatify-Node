@@ -50,7 +50,7 @@ router.post(
     let userId = '';
     let lineEndPoint;
     let lineData;
-    // logRecursive(data_raw);
+    logRecursive(data_raw);
     // return true;
     // return res.status(200).json({ message: 'Hello API from GET' });
 
@@ -247,6 +247,8 @@ router.post(
             ],
           };
         }
+
+        console.log(lineData);
 
         const Lineresponse = await axios.post(lineEndPoint, lineData, {
           headers: {
