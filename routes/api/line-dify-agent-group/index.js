@@ -49,6 +49,7 @@ router.post(
     let eventType = '';
     let userId = '';
     let lineEndPoint;
+    let lineData;
     // logRecursive(data_raw);
     // return true;
     // return res.status(200).json({ message: 'Hello API from GET' });
@@ -226,7 +227,7 @@ router.post(
         console.log(cleanAnswer);
 
         if (sourceType === 'user') {
-          const data = {
+          lineData = {
             replyToken,
             messages: [
               {
@@ -236,7 +237,7 @@ router.post(
             ],
           };
         } else if (sourceType === 'group') {
-          const data = {
+          lineData = {
             to: userId,
             messages: [
               {
@@ -247,10 +248,7 @@ router.post(
           };
         }
 
-        console.log('data');
-        console.log(data);
-
-        const Lineresponse = await axios.post(lineEndPoint, data, {
+        const Lineresponse = await axios.post(lineEndPoint, lineData, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${config.accessToken}`,
