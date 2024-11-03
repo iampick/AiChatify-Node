@@ -21,9 +21,8 @@ model UserConv {
   status       String  @default("standby")
   updateAt    DateTime   @default(now())
 
-    @@unique([userId], name:"userid_uniqe")
-    @@index([apiId])
-  @@index([userId], name: "idx_UserConv") // Index for userId
+  @@index([apiId])
+  @@index([userId]) // Index for userId
   @@unique([userId, apiId], name: "userId_apiId") // Composite unique constraint
 }
 
