@@ -33,8 +33,10 @@ const lineOpenAiAgent = require('./routes/api/line-openai-agent');
 const FbDifyAgent = require('./routes/api/facebook-dify');
 const lineEx10DifyAgent = require('./routes/api/line-ex10-dify-agent');
 const deleteChat = require('./routes/api/deleteHistory');
+const LineGruopDifyAgent = require('./routes/api/line-dify-agent-group');
 // Use routes
 app.use('/line-dify-agent', lineDifyAgent);
+app.use('/line-group-dify-agent', LineGruopDifyAgent);
 app.use('/line-ex10-dify-agent', lineEx10DifyAgent);
 app.use('/line-openai-agent', lineOpenAiAgent);
 app.use('/facebook-dify-agent', FbDifyAgent);

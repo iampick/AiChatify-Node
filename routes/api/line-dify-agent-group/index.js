@@ -2,8 +2,6 @@ const axios = require('axios');
 const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
-const { v4: uuidv4 } = require('uuid');
-const uuid = uuidv4();
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
@@ -31,11 +29,11 @@ router.post(
   '/',
   bodyParser.raw({ type: 'application/json' }),
   async (req, res) => {
-    console.log(req.body);
+    logRecursive(req.body);
     //
     // if (req.body && req.body.destination) {
     //   res.status(200).json({ message: 'Hello API' });
-    //   return true;
+    let userId = '';
     // }
     if (process.env.LINE_BOT !== 'on') {
       res.status(200).json({ message: 'Hello API' });
@@ -47,43 +45,30 @@ router.post(
     let imageParts = '';
     let files = [];
     let retrieveImage = '';
-    let eventType = '';
-    let userId = '';
-    let lineEndPoint;
-    let lineData;
-
+    let lineEndpoint = '';
+    // console.log(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
-    eventType = data_raw.events[0].type ? data_raw.events[0].type : null;
-    let conversionId = '';
-    // console.log(messageType);
+    const lineType = data_raw.events[0].type;
 
-    if (sourceType === 'user') {
-      userId = data_raw.events[0].source.userId;
-      lineEndPoint = 'https://api.line.me/v2/bot/message/reply';
-    } else if (sourceType === 'group') {
-      userId = data_raw.events[0].source.groupId;
-      lineEndPoint = 'https://api.line.me/v2/bot/message/push';
-      LineHeader = {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.accessToken}`,
-        'X-Line-Retry-Key': uuid,
-      };
-    }
-    console.log(replyToken);
-    console.log(sourceType);
-    console.log(messageType);
-    console.log(userId);
-    console.log(lineEndPoint);
-
-    if (eventType === 'leave') {
+    if (lineType === 'join' || lineType === 'leav') {
       return true;
     }
 
+    if (sourceType === 'group') {
+      userId = data_raw.events[0].source.groupId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    } else if (sourceType == 'user') {
+      userId = data_raw.events[0].source.userId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    }
+
+    let conversionId = '';
+    // console.log(messageType);
     if (messageType === 'text') {
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
@@ -103,8 +88,6 @@ router.post(
           upload_file_id: '',
         },
       ];
-    } else {
-      return true;
     }
 
     // console.log(data_raw.events[0].message);
@@ -233,37 +216,28 @@ router.post(
         console.log('cleanAnswer');
         console.log(cleanAnswer);
 
-        if (sourceType === 'user') {
-          lineData = {
-            replyToken,
-            messages: [
-              {
-                type: 'text',
-                text: cleanAnswer,
-              },
-            ],
-          };
-        } else if (sourceType === 'group') {
-          lineData = {
-            to: userId,
-            messages: [
-              {
-                type: 'text',
-                text: cleanAnswer,
-              },
-            ],
-          };
-        }
+        const data = {
+          replyToken,
+          messages: [
+            {
+              type: 'text',
+              text: cleanAnswer,
+            },
+          ],
+        };
+        console.log('data');
+        console.log(data);
 
-        console.log(lineData);
-
-        const Lineresponse = await axios.post(lineEndPoint, lineData, {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.accessToken}`,
+        const Lineresponse = await axios.post(
+          'https://api.line.me/v2/bot/message/reply',
+          data,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.accessToken}`,
+            },
           },
-        });
-
+        );
         const updatedRecord = await prisma.userConv.updateMany({
           where: {
             userId: userId,
