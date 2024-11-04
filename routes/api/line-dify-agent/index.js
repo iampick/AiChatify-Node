@@ -48,12 +48,14 @@ router.post(
     let userId = '';
     console.log(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
-
+    const messageType = data_raw.events[0].message.type;
+    if (memessageType !== 'text') {
+      return true;
+    }
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
     const lineType = data_raw.events[0].type;
     userId = data_raw.events[0].source.userId;
-    const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
     if (lineType === 'join' || lineType === 'leav') {
       return true;
@@ -69,9 +71,7 @@ router.post(
 
     let conversionId = '';
 
-    if (memessageType !== 'text') {
-      return true;
-    }
+
     if (messageType === 'text') {
       // console.log(messageType);
       retrieveMsg = data_raw.events[0].message.text;
