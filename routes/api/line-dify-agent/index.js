@@ -50,17 +50,17 @@ router.post(
     // return;
     // return res.status(200).json({ message: 'Hello API from GET' });
     const messageType = data_raw.events[0].message.type;
+    const lineType = data_raw.events[0].type;
+    if (lineType === 'join' || lineType === 'leave') {
+      return true;
+    }
     if (messageType !== 'text') {
       return true;
     }
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
-    const lineType = data_raw.events[0].type;
     userId = data_raw.events[0].source.userId;
     const messageId = data_raw.events[0].message.id;
-    if (lineType === 'join' || lineType === 'leave') {
-      return true;
-    }
 
     if (sourceType === 'group') {
       userId = data_raw.events[0].source.groupId;
