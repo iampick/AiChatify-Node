@@ -68,8 +68,12 @@ router.post(
     }
 
     let conversionId = '';
-    // console.log(messageType);
+
+    if (memessageType !== 'text') {
+      return true;
+    }
     if (messageType === 'text') {
+      // console.log(messageType);
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
       return true;
