@@ -45,13 +45,27 @@ router.post(
     let imageParts = '';
     let files = [];
     let retrieveImage = '';
+    let userId = '';
     console.log(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
-    const userId = data_raw.events[0].source.userId;
+    const sourceType = data_raw.events[0].source.type;
+    const lineType = data_raw.events[0].type;
+    userId = data_raw.events[0].source.userId;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
+    if (lineType === 'join' || lineType === 'leav') {
+      return true;
+    }
+
+    if (sourceType === 'group') {
+      userId = data_raw.events[0].source.groupId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    } else if (sourceType == 'user') {
+      userId = data_raw.events[0].source.userId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    }
 
     let conversionId = '';
     // console.log(messageType);
