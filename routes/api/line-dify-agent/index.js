@@ -46,10 +46,11 @@ router.post(
     let files = [];
     let retrieveImage = '';
     let userId = '';
-    console.log(data_raw);
+    // logRecursive(data_raw);
+    // return;
     // return res.status(200).json({ message: 'Hello API from GET' });
     const messageType = data_raw.events[0].message.type;
-    if (memessageType !== 'text') {
+    if (messageType !== 'text') {
       return true;
     }
     const replyToken = data_raw.events[0].replyToken;
@@ -57,7 +58,7 @@ router.post(
     const lineType = data_raw.events[0].type;
     userId = data_raw.events[0].source.userId;
     const messageId = data_raw.events[0].message.id;
-    if (lineType === 'join' || lineType === 'leav') {
+    if (lineType === 'join' || lineType === 'leave') {
       return true;
     }
 
@@ -70,7 +71,6 @@ router.post(
     }
 
     let conversionId = '';
-
 
     if (messageType === 'text') {
       // console.log(messageType);
