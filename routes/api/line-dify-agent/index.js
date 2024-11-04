@@ -45,22 +45,16 @@ router.post(
     let imageParts = '';
     let files = [];
     let retrieveImage = '';
-    let eventType = '';
-    logRecursive(data_raw);
-    return true;
+    console.log(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
     const userId = data_raw.events[0].source.userId;
     const messageType = data_raw.events[0].message.type;
     const messageId = data_raw.events[0].message.id;
-    eventType = data_raw.events[0].type;
+
     let conversionId = '';
     // console.log(messageType);
-    if (eventType === 'leave') {
-      return true;
-    }
-
     if (messageType === 'text') {
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
