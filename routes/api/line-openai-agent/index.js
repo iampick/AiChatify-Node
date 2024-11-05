@@ -5,6 +5,7 @@ const OpenAI = require('openai');
 const openai = new OpenAI();
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
+const waitForStandby = require('./waitForStandby');
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -24,139 +25,184 @@ router.get('/', (req, res) => {
   res.status(200).json({ message: 'Hello API from GET' });
 });
 
-router.post('/', async (req, res) => {
-  if (process.env.LINE_BOT !== 'on') {
-    res.status(200).json({ message: 'Hello API' });
-    return true;
-  }
+router.post(
+  '/',
+  bodyParser.raw({ type: 'application/json' }),
+  async (req, res) => {
+    console.log(req.body);
 
-  const data_raw = req.body;
-  let retrieveMsg = '';
-  let imageParts = '';
-  let files = [];
-  let retrieveImage = '';
-  console.log(data_raw);
-  // return res.status(200).json({ message: 'Hello API from GET' });
+    if (process.env.LINE_BOT !== 'on') {
+      res.status(200).json({ message: 'Hello API' });
+      return true;
+    }
 
-  const replyToken = data_raw.events[0].replyToken;
-  const userId = data_raw.events[0].source.userId;
-  const messageType = data_raw.events[0].message.type;
-  const messageId = data_raw.events[0].message.id;
+    const data_raw = req.body;
+    let retrieveMsg = '';
+    let imageParts = '';
+    let files = [];
+    let retrieveImage = '';
+    let userId = '';
 
-  let conversionId = '';
-  // console.log(messageType);
-  if (messageType === 'text') {
-    retrieveMsg = data_raw.events[0].message.text;
-  } else if (messageType === 'image') {
-    res.status(200).json({ message: 'Hello API' });
-    return true;
-    retrieveImage = await getImageBinary(messageId, LineHeader);
-    // const mimeType = 'image/png';
-    const ImgBuff = Buffer.from(retrieveImage).toString('base64');
-    imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
-    retrieveMsg = 'Please wait for question';
-    console.log(imageParts.url);
-    imageParts = imageParts.url;
-    files = [
-      {
-        type: 'image',
-        transfer_method: 'remote_url',
-        url: imageParts,
-        upload_file_id: '',
+    const messageType = data_raw.events[0].message.type;
+    const lineType = data_raw.events[0].type;
+    if (lineType === 'join' || lineType === 'leave') {
+      return true;
+    }
+    if (messageType !== 'text') {
+      return true;
+    }
+    // return res.status(200).json({ message: 'Hello API from GET' });
+
+    const replyToken = data_raw.events[0].replyToken;
+    const sourceType = data_raw.events[0].source.type;
+
+    userId = data_raw.events[0].source.userId;
+    const messageId = data_raw.events[0].message.id;
+
+    if (sourceType === 'group') {
+      userId = data_raw.events[0].source.groupId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    } else if (sourceType == 'user') {
+      userId = data_raw.events[0].source.userId;
+      lineEndpoint = 'https://api.line.me/v2/bot/message/reply';
+    }
+
+    let conversionId = '';
+    // console.log(messageType);
+    if (messageType === 'text') {
+      retrieveMsg = data_raw.events[0].message.text;
+    } else if (messageType === 'image') {
+      res.status(200).json({ message: 'Hello API' });
+      return true;
+      retrieveImage = await getImageBinary(messageId, LineHeader);
+      // const mimeType = 'image/png';
+      const ImgBuff = Buffer.from(retrieveImage).toString('base64');
+      imageParts = await uploadFile(`data:image/png;base64,${ImgBuff}`, userId);
+      retrieveMsg = 'Please wait for question';
+      console.log(imageParts.url);
+      imageParts = imageParts.url;
+      files = [
+        {
+          type: 'image',
+          transfer_method: 'remote_url',
+          url: imageParts,
+          upload_file_id: '',
+        },
+      ];
+    }
+    // console.log(data_raw.events[0].message);
+    // console.log(files);
+
+    const last10Chars = process.env.OPENAI_ASSISTANT_ID.slice(-10);
+
+    // Query to get all todos from the "todo" table
+    const userInDb = await prisma.UserConv.findFirst({
+      where: {
+        userId: userId,
+        apiId: last10Chars,
       },
-    ];
-  }
-  // console.log(data_raw.events[0].message);
-  // console.log(files);
+      orderBy: {
+        id: 'desc',
+      },
+      take: 1,
+    });
 
-  const last10Chars = process.env.OPENAI_ASSISTANT_ID.slice(-10);
+    // console.log(userId);
+    // console.log(last10Chars);
+    // console.log(userInDb);
+    if (userInDb) {
+      await waitForStandby(userId, last10Chars);
 
-  // Query to get all todos from the "todo" table
-  const userInDb = await prisma.UserConv.findFirst({
-    where: {
-      userId: userId,
-      apiId: last10Chars,
-    },
-    orderBy: {
-      id: 'desc',
-    },
-    take: 1,
-  });
-
-  // console.log(userId);
-  // console.log(last10Chars);
-  // console.log(userInDb);
-  if (userInDb) {
-    conversionId = userInDb.conversionId;
-  }
-
-  let dataToAi = JSON.stringify({
-    message: retrieveMsg,
-    userId: userId,
-    conversionId: conversionId,
-    files: files,
-  });
-
-  // console.log(dataToAi);
-  // connectOpenAi(dataToAi).then(async (response) => {
-  //   console.log(response);
-  // });
-  connectOpenAi(dataToAi)
-    .then(async (response) => {
-      // Assuming `response.data` is a stringified JSON that looks like the given output.
-
-      const rawData = response.message.replace(/\*/g, '');
-      const responseConverId = response.converId;
-
-      const checkUserExist = await prisma.userConv.count({
+      conversionId = userInDb.conversionId;
+      const updatedRecord = await prisma.userConv.updateMany({
         where: {
           userId: userId,
           apiId: last10Chars,
         },
+        data: {
+          status: 'sending',
+        },
       });
+    }
 
-      if (checkUserExist === 0) {
-        const result = await prisma.userConv.create({
-          data: {
+    let dataToAi = JSON.stringify({
+      message: retrieveMsg,
+      userId: userId,
+      conversionId: conversionId,
+      files: files,
+    });
+
+    // console.log(dataToAi);
+    // connectOpenAi(dataToAi).then(async (response) => {
+    //   console.log(response);
+    // });
+    connectOpenAi(dataToAi)
+      .then(async (response) => {
+        // Assuming `response.data` is a stringified JSON that looks like the given output.
+
+        const rawData = response.message.replace(/\*/g, '');
+        const responseConverId = response.converId;
+
+        const checkUserExist = await prisma.userConv.count({
+          where: {
             userId: userId,
-            conversionId: responseConverId,
             apiId: last10Chars,
           },
         });
-      }
 
-      const cleanAnswer = rawData.replace(/Final Answer: /g, '');
-      console.log('cleanAnswer');
-      console.log(cleanAnswer);
+        if (checkUserExist === 0) {
+          const result = await prisma.userConv.create({
+            data: {
+              userId: userId,
+              conversionId: responseConverId,
+              apiId: last10Chars,
+              status: 'sending',
+            },
+          });
+        }
 
-      const data = {
-        replyToken,
-        messages: [
+        const cleanAnswer = rawData.replace(/Final Answer: /g, '');
+        console.log('cleanAnswer');
+        console.log(cleanAnswer);
+
+        const data = {
+          replyToken,
+          messages: [
+            {
+              type: 'text',
+              text: cleanAnswer,
+            },
+          ],
+        };
+        const Lineresponse = await axios.post(
+          'https://api.line.me/v2/bot/message/reply',
+          data,
           {
-            type: 'text',
-            text: cleanAnswer,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.accessToken}`,
+            },
           },
-        ],
-      };
-      const Lineresponse = await axios.post(
-        'https://api.line.me/v2/bot/message/reply',
-        data,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${config.accessToken}`,
+        );
+        const updatedRecord = await prisma.userConv.updateMany({
+          where: {
+            userId: userId,
+            apiId: last10Chars,
           },
-        },
-      );
-    })
-    .catch((error) => {
-      console.log(error);
-    });
+          data: {
+            status: 'standby',
+          },
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
 
-  // console.log(JSON.stringify(response.data, null, 4));
-  res.status(200).json({ message: 'Hello API from POST' });
-  // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
-});
+    // console.log(JSON.stringify(response.data, null, 4));
+    res.status(200).json({ message: 'Hello API from POST' });
+    // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
+  },
+);
 
 async function connectOpenAi(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
