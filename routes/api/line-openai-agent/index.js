@@ -3,6 +3,8 @@ const express = require('express');
 const router = express.Router();
 const OpenAI = require('openai');
 const openai = new OpenAI();
+const bodyParser = require('body-parser');
+
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
