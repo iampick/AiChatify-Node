@@ -220,6 +220,18 @@ router.post(
         console.log('cleanAnswer');
         console.log(cleanAnswer);
 
+        if (cleanAnswer === '') {
+          const updatedRecord = await prisma.userConv.updateMany({
+            where: {
+              userId: userId,
+              apiId: last10Chars,
+            },
+            data: {
+              status: 'standby',
+            },
+          });
+          return true;
+        }
         const data = {
           replyToken,
           messages: [
