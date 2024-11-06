@@ -47,7 +47,7 @@ router.post(
 
     const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
-    if (lineType === 'join' || lineType === 'leave') {
+    if (lineType !== 'message') {
       return true;
     }
     if (messageType !== 'text') {
