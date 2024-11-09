@@ -230,6 +230,9 @@ router.post(
               status: 'standby',
             },
           });
+
+          deleteChat(converIdString, userId);
+
           return true;
         }
         const data = {
@@ -358,6 +361,30 @@ function logRecursive(obj, depth = 0) {
   } else {
     console.log(indent + obj);
   }
+}
+
+async function deleteChat(converId, userId) {
+  const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
+
+  axios
+    .delete(`https://api.dify.ai/v1/conversations/${converId}`, {
+      headers: {
+        Authorization: `Bearer ${api_key}`,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        user: userId,
+      },
+    })
+    .then((response) => {
+      console.log('Success:', response.data);
+    })
+    .catch((error) => {
+      console.error(
+        'Error:',
+        error.response ? error.response.data : error.message,
+      );
+    });
 }
 
 // export the router module so that server.js file can use it
