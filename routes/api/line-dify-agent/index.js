@@ -51,7 +51,7 @@ router.post(
     // return res.status(200).json({ message: 'Hello API from GET' });
     const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
-    if (lineType !== 'message') {
+    if (lineType === 'join' || lineType === 'leave') {
       return true;
     }
     if (messageType !== 'text') {
