@@ -1,15 +1,16 @@
 const axios = require('axios');
 const express = require('express');
-const bodyParser = require('body-parser');
-const { PrismaClient } = require('@prisma/client');
+const router = express.Router();
 const OpenAI = require('openai');
+const openai = new OpenAI();
+const bodyParser = require('body-parser');
+
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
 
-const router = express.Router();
+const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const openai = new OpenAI();
 
 const config = {
   accessToken: process.env.LINE_ACCESS_TOKEN,
@@ -21,16 +22,21 @@ const LineHeader = {
   Authorization: `Bearer ${config.accessToken}`,
 };
 
+// console.log(client);
 router.get('/', (req, res) => {
   res.status(200).json({ message: 'Hello API from GET' });
 });
 
-router.post('/', bodyParser.raw({ type: 'application/json' }), async (req, res) => {
-  console.log(req.body);
+router.post(
+  '/',
+  bodyParser.raw({ type: 'application/json' }),
+  async (req, res) => {
+    console.log(req.body);
 
-  if (process.env.LINE_BOT !== 'on') {
-    return res.status(200).json({ message: 'Hello API' });
-  }
+    if (process.env.LINE_BOT !== 'on') {
+      res.status(200).json({ message: 'Hello API' });
+      return true;
+    }
 
     const data_raw = req.body;
     let retrieveMsg = '';
@@ -41,7 +47,7 @@ router.post('/', bodyParser.raw({ type: 'application/json' }), async (req, res) 
 
     const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
-    if (lineType === 'join' || lineType === 'leave') {
+    if (lineType !== 'message') {
       return true;
     }
     if (messageType !== 'text') {
@@ -103,75 +109,148 @@ router.post('/', bodyParser.raw({ type: 'application/json' }), async (req, res) 
       take: 1,
     });
 
-  if (userInDb) {
-    await waitForStandby(userId, last10Chars);
-    await prisma.userConv.updateMany({
-      where: { userId, apiId: last10Chars },
-      data: { status: 'sending' },
+    // console.log(userId);
+    // console.log(last10Chars);
+    // console.log(userInDb);
+    if (userInDb) {
+      await waitForStandby(userId, last10Chars);
+
+      conversionId = userInDb.conversionId;
+      const updatedRecord = await prisma.userConv.updateMany({
+        where: {
+          userId: userId,
+          apiId: last10Chars,
+        },
+        data: {
+          status: 'sending',
+        },
+      });
+    }
+
+    let dataToAi = JSON.stringify({
+      message: retrieveMsg,
+      userId: userId,
+      conversionId: conversionId,
+      files: files,
     });
-    return userInDb.conversionId;
-  }
-  return '';
-}
 
-async function handleOpenAiResponse(response, userId, replyToken) {
-  const rawData = response.message.replace(/\*/g, '');
-  const responseConverId = response.converId;
-  const last10Chars = process.env.OPENAI_ASSISTANT_ID.slice(-10);
+    // console.log(dataToAi);
+    // connectOpenAi(dataToAi).then(async (response) => {
+    //   console.log(response);
+    // });
+    connectOpenAi(dataToAi)
+      .then(async (response) => {
+        // Assuming `response.data` is a stringified JSON that looks like the given output.
 
-  const checkUserExist = await prisma.userConv.count({
-    where: { userId, apiId: last10Chars },
-  });
+        const rawData = response.message.replace(/\*/g, '');
+        const responseConverId = response.converId;
 
-  if (checkUserExist === 0) {
-    await prisma.userConv.create({
-      data: { userId, conversionId: responseConverId, apiId: last10Chars, status: 'sending' },
-    });
-  }
+        const checkUserExist = await prisma.userConv.count({
+          where: {
+            userId: userId,
+            apiId: last10Chars,
+          },
+        });
 
-  const cleanAnswer = rawData.replace(/Final Answer: /g, '');
-  const data = {
-    replyToken,
-    messages: [{ type: 'text', text: cleanAnswer }],
-  };
+        if (checkUserExist === 0) {
+          const result = await prisma.userConv.create({
+            data: {
+              userId: userId,
+              conversionId: responseConverId,
+              apiId: last10Chars,
+              status: 'sending',
+            },
+          });
+        }
 
-  await axios.post('https://api.line.me/v2/bot/message/reply', data, { headers: LineHeader });
-  await prisma.userConv.updateMany({
-    where: { userId, apiId: last10Chars },
-    data: { status: 'standby' },
-  });
-}
+        const cleanAnswer = rawData.replace(/Final Answer: /g, '');
+        console.log('cleanAnswer');
+        console.log(cleanAnswer);
+
+        const data = {
+          replyToken,
+          messages: [
+            {
+              type: 'text',
+              text: cleanAnswer,
+            },
+          ],
+        };
+        const Lineresponse = await axios.post(
+          'https://api.line.me/v2/bot/message/reply',
+          data,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${config.accessToken}`,
+            },
+          },
+        );
+        const updatedRecord = await prisma.userConv.updateMany({
+          where: {
+            userId: userId,
+            apiId: last10Chars,
+          },
+          data: {
+            status: 'standby',
+          },
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+
+    // console.log(JSON.stringify(response.data, null, 4));
+    res.status(200).json({ message: 'Hello API from POST' });
+    // return NextResponse.json({ message: 'Hello API from POST' }, { status: 200 });
+  },
+);
 
 async function connectOpenAi(dataAI) {
-  const api_key = process.env.DIFY_API_KEY;
-  const assistant_id = process.env.OPENAI_ASSISTANT_ID;
+  const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
+  const assistant_id = process.env.OPENAI_ASSISTANT_ID; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  let thread_id = data_raw.conversionId || (await openai.beta.threads.create()).id;
+  let thread_id = '';
+  let compleatAnswer = '';
 
-  await openai.beta.threads.messages.create(thread_id, {
+  if (data_raw.conversionId === '') {
+    const thread = await openai.beta.threads.create();
+    thread_id = thread.id;
+  } else {
+    thread_id = data_raw.conversionId;
+  }
+  console.log(thread_id);
+  const message = await openai.beta.threads.messages.create(thread_id, {
     role: 'user',
     content: data_raw.message.trim(),
   });
+  console.log('message');
+  console.log(message);
 
-  const run = await openai.beta.threads.runs.createAndPoll(thread_id, {
-    assistant_id,
+  let run = await openai.beta.threads.runs.createAndPoll(thread_id, {
+    assistant_id: assistant_id,
     instructions: data_raw.message.trim(),
   });
 
   if (run.status === 'completed') {
     const messages = await openai.beta.threads.messages.list(run.thread_id);
-    const compleatAnswer = messages.data.reverse().find(
-      (msg) => msg.role === 'assistant' && msg.content[0].text.value
-    ).content[0].text.value;
-
-    return { message: compleatAnswer, converId: thread_id };
+    for (const message of messages.data.reverse()) {
+      if (message.role === 'assistant' && message.content[0].text.value) {
+        console.log('adding assistan response.......');
+        compleatAnswer = message.content[0].text.value;
+      }
+      // console.log(`${message.role} > ${message.content[0].text.value}`);
+    }
   } else {
-    throw new Error(run.status);
+    console.log(run.status);
   }
+  // console.log(compleatAnswer);
+
+  return { message: compleatAnswer, converId: thread_id };
 }
 
 function logRecursive(obj, depth = 0) {
-  const indent = ' '.repeat(depth * 2);
+  const indent = ' '.repeat(depth * 2); // Indentation for better readability
 
   if (Array.isArray(obj)) {
     console.log(indent + '[');
@@ -193,5 +272,5 @@ function logRecursive(obj, depth = 0) {
     console.log(indent + obj);
   }
 }
-
+// export the router module so that server.js file can use it
 module.exports = router;
