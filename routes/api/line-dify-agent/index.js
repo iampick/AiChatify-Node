@@ -172,7 +172,7 @@ router.post(
             // Handle parse error or continue (e.g., log the error and continue)
           }
         });
-
+        console.log('extractedData');
         // Convert the Set of conversation IDs to an array for easier usage.
         extractedData.conversation_ids = [...extractedData.conversation_ids];
         const converId = extractedData.conversation_ids;
@@ -359,5 +359,6 @@ function logRecursive(obj, depth = 0) {
     console.log(indent + obj);
   }
 }
+
 // export the router module so that server.js file can use it
 module.exports = router;
