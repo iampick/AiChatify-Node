@@ -218,6 +218,8 @@ async function connectOpenAi(dataAI, thread_id) {
   const data_raw = JSON.parse(dataAI);
   // let thread_id = '';
   let compleatAnswer = '';
+  console.log('thread_id');
+  console.log(thread_id);
 
   if (data_raw.conversionId === '') {
     const thread = await openai.beta.threads.create();
@@ -225,7 +227,6 @@ async function connectOpenAi(dataAI, thread_id) {
   } else {
     thread_id = data_raw.message.thread_id;
   }
-  console.log(thread_id);
   const message = await openai.beta.threads.messages.create(thread_id, {
     role: 'user',
     content: data_raw.message.trim(),
