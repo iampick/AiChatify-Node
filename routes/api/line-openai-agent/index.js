@@ -50,11 +50,11 @@ router.post(
     const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
-      consol.elog(`invalid type`);
+      consol.log(`invalid type`);
       return true;
     }
     if (messageType !== 'text') {
-      consol.elog(`invalid massages`);
+      consol.log(`invalid massages`);
 
       return true;
     }
