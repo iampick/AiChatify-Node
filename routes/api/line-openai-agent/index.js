@@ -47,13 +47,13 @@ router.post(
     let retrieveImage = '';
     let userId = '';
 
-    // const messageType = data_raw.events[0].message.type;
+    const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
       consol.elog(`invalid type`);
       return true;
     }
-    if (data_raw.events[0].message.type !== 'text') {
+    if (messageType !== 'text') {
       consol.elog(`invalid massages`);
 
       return true;
