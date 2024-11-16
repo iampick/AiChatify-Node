@@ -45,12 +45,12 @@ router.post(
     let retrieveImage = '';
     let userId = '';
 
-    const messageType = data_raw.events[0].message.type;
+    // const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
       return true;
     }
-    if (messageType !== 'text') {
+    if (lineType !== 'text') {
       return true;
     }
 
@@ -219,7 +219,7 @@ async function connectOpenAi(dataAI, thread_id) {
     const thread = await openai.beta.threads.create();
     thread_id = thread.id;
   } else {
-    thread_id = data_raw.conversionId;
+    thread_id = data_raw.message.thread_id;
   }
   console.log(thread_id);
   const message = await openai.beta.threads.messages.create(thread_id, {
