@@ -138,7 +138,7 @@ router.post(
     // connectOpenAi(dataToAi).then(async (response) => {
     //   console.log(response);
     // });
-    connectOpenAi(dataToAi)
+    connectOpenAi(dataToAi, conversionId)
       .then(async (response) => {
         // Assuming `response.data` is a stringified JSON that looks like the given output.
 
@@ -206,11 +206,11 @@ router.post(
   },
 );
 
-async function connectOpenAi(dataAI) {
+async function connectOpenAi(dataAI, thread_id) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const assistant_id = process.env.OPENAI_ASSISTANT_ID; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  let thread_id = '';
+  // let thread_id = '';
   let compleatAnswer = '';
 
   if (data_raw.conversionId === '') {
