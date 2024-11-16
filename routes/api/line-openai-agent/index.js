@@ -212,20 +212,18 @@ router.post(
   },
 );
 
-async function connectOpenAi(dataAI, thread_id) {
+async function connectOpenAi(dataAI, thread_id_source) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const assistant_id = process.env.OPENAI_ASSISTANT_ID; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  // let thread_id = '';
+  let thread_id = thread_id_source;
   let compleatAnswer = '';
   console.log('thread_id');
   console.log(thread_id);
 
-  if (data_raw.conversionId === '') {
+  if (thread_id === '') {
     const thread = await openai.beta.threads.create();
     thread_id = thread.id;
-  } else {
-    thread_id = data_raw.message.thread_id;
   }
   const message = await openai.beta.threads.messages.create(thread_id, {
     role: 'user',
