@@ -33,6 +33,8 @@ router.post(
   async (req, res) => {
     console.log(req.body);
 
+    logRecursive(req.body);
+
     if (process.env.LINE_BOT !== 'on') {
       res.status(200).json({ message: 'Hello API' });
       return true;
@@ -54,7 +56,6 @@ router.post(
       return true;
     }
 
-    logRecursive(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
