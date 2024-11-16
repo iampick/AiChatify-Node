@@ -53,6 +53,8 @@ router.post(
     if (messageType !== 'text') {
       return true;
     }
+
+    logRecursive(data_raw);
     // return res.status(200).json({ message: 'Hello API from GET' });
 
     const replyToken = data_raw.events[0].replyToken;
