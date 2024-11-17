@@ -49,11 +49,13 @@ router.post(
     // logRecursive(data_raw);
     // return;
     // return res.status(200).json({ message: 'Hello API from GET' });
-    const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
       return true;
     }
+
+    const messageType = data_raw.events[0].message.type;
+
     if (messageType !== 'text') {
       return true;
     }
