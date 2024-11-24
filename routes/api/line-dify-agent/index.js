@@ -381,7 +381,13 @@ async function deleteChat(converId, userId) {
         user: userId,
       },
     })
-    .then((response) => {
+    .then(async (response) => {
+      await prisma.UserConv.deleteMany({
+        where: {
+          userId: userId, // Replace 'userId' with 'xx' or your specific value
+        },
+      });
+
       console.log('Dify deleted');
       console.log('Success:', response.data);
     })
