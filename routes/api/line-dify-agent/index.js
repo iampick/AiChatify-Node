@@ -96,9 +96,9 @@ router.post(
       ];
     }
 
-    // console.log(data_raw.events[0].message);
-    // console.log(files);
     if (messageType === 'image') {
+      // console.log(data_raw.events[0].message);
+      // console.log(files);
       return true;
     }
     const last10Chars = process.env.DIFY_API_KEY.slice(-10);
@@ -140,7 +140,10 @@ router.post(
       conversionId: conversionId,
       files: files,
     });
-
+    if (retrieveMsg === '//reset') {
+      deleteChat(conversionId, userId);
+      return true;
+    }
     // console.log(dataToAi);
 
     connectDify(dataToAi)
@@ -379,6 +382,7 @@ async function deleteChat(converId, userId) {
       },
     })
     .then((response) => {
+      console.log('Dify deleted');
       console.log('Success:', response.data);
     })
     .catch((error) => {
