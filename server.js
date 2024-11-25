@@ -30,6 +30,7 @@ app.get('/business-profile', (req, res) => {
 // Include route files
 const lineDifyAgent = require('./routes/api/line-dify-agent');
 const lineOpenAiAgent = require('./routes/api/line-openai-agent');
+const testLine = require('./routes/api/testline');
 const FbDifyAgent = require('./routes/api/facebook-dify');
 const lineEx10DifyAgent = require('./routes/api/line-ex10-dify-agent');
 const deleteChat = require('./routes/api/deleteHistory');
@@ -39,6 +40,7 @@ app.use('/line-dify-agent', lineDifyAgent);
 app.use('/line-group-dify-agent', LineGruopDifyAgent);
 app.use('/line-ex10-dify-agent', lineEx10DifyAgent);
 app.use('/line-openai-agent', lineOpenAiAgent);
+app.use('/testline', testLine);
 app.use('/facebook-dify-agent', FbDifyAgent);
 app.use('/deletechat', deleteChat);
 
