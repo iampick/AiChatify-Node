@@ -33,8 +33,6 @@ router.post(
   async (req, res) => {
     console.log(req.body);
 
-    logRecursive(req.body);
-
     if (process.env.LINE_BOT !== 'on') {
       res.status(200).json({ message: 'Hello API' });
       return true;
@@ -47,18 +45,19 @@ router.post(
     let retrieveImage = '';
     let userId = '';
 
+    const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
       return true;
     }
-
-    const messageType = data_raw.events[0].message.type;
-
     if (messageType !== 'text') {
       return true;
     }
+    // return res.status(200).json({ message: 'Hello API from GET' });
+
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
+
     userId = data_raw.events[0].source.userId;
     const messageId = data_raw.events[0].message.id;
 
@@ -73,9 +72,9 @@ router.post(
     let conversionId = '';
     // console.log(messageType);
     if (messageType === 'text') {
-      // console.log(messageType);
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
+      res.status(200).json({ message: 'Hello API' });
       return true;
       retrieveImage = await getImageBinary(messageId, LineHeader);
       // const mimeType = 'image/png';
@@ -93,13 +92,6 @@ router.post(
         },
       ];
     }
-
-    if (messageType === 'image') {
-      // console.log(data_raw.events[0].message);
-      // console.log(files);
-      return true;
-    }
-
     // console.log(data_raw.events[0].message);
     // console.log(files);
 
@@ -146,7 +138,7 @@ router.post(
     // connectOpenAi(dataToAi).then(async (response) => {
     //   console.log(response);
     // });
-    connectOpenAi(dataToAi, conversionId)
+    connectOpenAi(dataToAi)
       .then(async (response) => {
         // Assuming `response.data` is a stringified JSON that looks like the given output.
 
@@ -172,8 +164,6 @@ router.post(
         }
 
         const cleanAnswer = rawData.replace(/Final Answer: /g, '');
-        console.log('replyToken');
-        console.log(replyToken);
         console.log('cleanAnswer');
         console.log(cleanAnswer);
 
@@ -216,19 +206,20 @@ router.post(
   },
 );
 
-async function connectOpenAi(dataAI, thread_id_source) {
+async function connectOpenAi(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const assistant_id = process.env.OPENAI_ASSISTANT_ID; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  let thread_id = thread_id_source;
+  let thread_id = '';
   let compleatAnswer = '';
-  console.log('thread_id');
-  console.log(thread_id);
 
-  if (thread_id === '') {
+  if (data_raw.conversionId === '') {
     const thread = await openai.beta.threads.create();
     thread_id = thread.id;
+  } else {
+    thread_id = data_raw.conversionId;
   }
+  console.log(thread_id);
   const message = await openai.beta.threads.messages.create(thread_id, {
     role: 'user',
     content: data_raw.message.trim(),
