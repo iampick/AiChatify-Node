@@ -284,6 +284,19 @@ router.post(
   },
 );
 
+const LineReoky = async (data) => {
+  const Lineresponse = await axios.post(
+    'https://api.line.me/v2/bot/message/reply',
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.accessToken}`,
+      },
+    },
+  );
+};
+
 async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
