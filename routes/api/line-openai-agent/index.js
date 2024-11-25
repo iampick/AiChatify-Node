@@ -47,23 +47,18 @@ router.post(
     let retrieveImage = '';
     let userId = '';
 
-    const messageType = data_raw.events[0].message.type;
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
-      consol.log(`invalid type`);
       return true;
     }
+
+    const messageType = data_raw.events[0].message.type;
+
     if (messageType !== 'text') {
-      consol.log(`invalid massages`);
-
       return true;
     }
-
-    // return res.status(200).json({ message: 'Hello API from GET' });
-
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
-
     userId = data_raw.events[0].source.userId;
     const messageId = data_raw.events[0].message.id;
 
@@ -78,9 +73,9 @@ router.post(
     let conversionId = '';
     // console.log(messageType);
     if (messageType === 'text') {
+      // console.log(messageType);
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
-      res.status(200).json({ message: 'Hello API' });
       return true;
       retrieveImage = await getImageBinary(messageId, LineHeader);
       // const mimeType = 'image/png';
@@ -98,6 +93,13 @@ router.post(
         },
       ];
     }
+
+    if (messageType === 'image') {
+      // console.log(data_raw.events[0].message);
+      // console.log(files);
+      return true;
+    }
+
     // console.log(data_raw.events[0].message);
     // console.log(files);
 
