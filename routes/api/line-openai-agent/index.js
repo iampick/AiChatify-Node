@@ -1,10 +1,7 @@
 const axios = require('axios');
 const express = require('express');
 const router = express.Router();
-const OpenAI = require('openai');
-const openai = new OpenAI();
 const bodyParser = require('body-parser');
-
 const getImageBinary = require('../../../utils/getImageBinary');
 const { uploadFile } = require('../../../utils/cloudinary');
 const waitForStandby = require('./waitForStandby');
@@ -24,6 +21,7 @@ const LineHeader = {
 
 // console.log(client);
 router.get('/', (req, res) => {
+  console.log(process.env.DIFY_API_KEY);
   res.status(200).json({ message: 'Hello API from GET' });
 });
 
@@ -32,7 +30,11 @@ router.post(
   bodyParser.raw({ type: 'application/json' }),
   async (req, res) => {
     console.log(req.body);
-
+    //
+    // if (req.body && req.body.destination) {
+    //   res.status(200).json({ message: 'Hello API' });
+    //   return true;
+    // }
     if (process.env.LINE_BOT !== 'on') {
       res.status(200).json({ message: 'Hello API' });
       return true;
@@ -44,20 +46,21 @@ router.post(
     let files = [];
     let retrieveImage = '';
     let userId = '';
-
-    const messageType = data_raw.events[0].message.type;
+    // logRecursive(data_raw);
+    // return;
+    // return res.status(200).json({ message: 'Hello API from GET' });
     const lineType = data_raw.events[0].type;
     if (lineType !== 'message') {
       return true;
     }
+
+    const messageType = data_raw.events[0].message.type;
+
     if (messageType !== 'text') {
       return true;
     }
-    // return res.status(200).json({ message: 'Hello API from GET' });
-
     const replyToken = data_raw.events[0].replyToken;
     const sourceType = data_raw.events[0].source.type;
-
     userId = data_raw.events[0].source.userId;
     const messageId = data_raw.events[0].message.id;
 
@@ -70,11 +73,11 @@ router.post(
     }
 
     let conversionId = '';
-    // console.log(messageType);
+
     if (messageType === 'text') {
+      // console.log(messageType);
       retrieveMsg = data_raw.events[0].message.text;
     } else if (messageType === 'image') {
-      res.status(200).json({ message: 'Hello API' });
       return true;
       retrieveImage = await getImageBinary(messageId, LineHeader);
       // const mimeType = 'image/png';
@@ -92,10 +95,14 @@ router.post(
         },
       ];
     }
-    // console.log(data_raw.events[0].message);
-    // console.log(files);
 
-    const last10Chars = process.env.OPENAI_ASSISTANT_ID.slice(-10);
+    if (messageType === 'image') {
+      // console.log(data_raw.events[0].message);
+      // console.log(files);
+      return true;
+    }
+    const last10Chars = process.env.DIFY_API_KEY.slice(-10);
+    // const last10Chars = 'app-1k7DZ3qK1PnfmrWfzgIsvVfM'.slice(-10);
 
     // Query to get all todos from the "todo" table
     const userInDb = await prisma.UserConv.findFirst({
@@ -109,8 +116,8 @@ router.post(
       take: 1,
     });
 
-    // console.log(userId);
-    // console.log(last10Chars);
+    // console.log('++++++++++++++++++++');
+    // console.log(process.env.DIFY_API_KEY);
     // console.log(userInDb);
     if (userInDb) {
       await waitForStandby(userId, last10Chars);
@@ -133,40 +140,106 @@ router.post(
       conversionId: conversionId,
       files: files,
     });
-
+    if (retrieveMsg === '//reset') {
+      deleteChat(conversionId, userId);
+      return true;
+    }
     // console.log(dataToAi);
-    // connectOpenAi(dataToAi).then(async (response) => {
-    //   console.log(response);
-    // });
-    connectOpenAi(dataToAi)
+
+    connectDify(dataToAi)
       .then(async (response) => {
         // Assuming `response.data` is a stringified JSON that looks like the given output.
 
-        const rawData = response.message.replace(/\*/g, '');
-        const responseConverId = response.converId;
+        const rawData = response.replace(/\*/g, '');
+        const dataParts = rawData
+          .split('\n')
+          .filter((part) => part.startsWith('data:'));
 
-        const checkUserExist = await prisma.userConv.count({
-          where: {
-            userId: userId,
-            apiId: last10Chars,
-          },
+        // Define an object to hold the extracted information.
+        let extractedData = {
+          conversation_ids: new Set(), // Use a Set to avoid duplicate IDs
+          answers: [],
+        };
+
+        // console.log(dataParts.answer);
+        dataParts.forEach((part) => {
+          const jsonPart = part.substring(6); // Remove 'data: ' prefix
+
+          try {
+            const parsedObj = JSON.parse(jsonPart);
+
+            // Add the conversation_id to the Set (duplicates will be ignored)
+            extractedData.conversation_ids.add(parsedObj.conversation_id);
+
+            extractedData.answers.push(parsedObj.answer || ''); // Use empty string if undefined
+          } catch (error) {
+            console.error('Failed to parse JSON:', jsonPart, 'Error:', error);
+            // Handle parse error or continue (e.g., log the error and continue)
+          }
         });
+        console.log('extractedData');
+        // Convert the Set of conversation IDs to an array for easier usage.
+        extractedData.conversation_ids = [...extractedData.conversation_ids];
+        const converId = extractedData.conversation_ids;
+        const converIdString = converId.join(); // This will use comma as the default separator
 
-        if (checkUserExist === 0) {
+        // Combine unique answers into a single string
+        console.log('-------');
+        console.log(extractedData.answers.length);
+        let no = 0;
+        let answerLenght = false;
+        extractedData.answers.map((txt) => {
+          answerLenght = false;
+          no++;
+          if (txt.length > 50) {
+            answerLenght = true;
+            console.log('answerLenght true -------');
+          }
+          return console.log(`${no} => ${txt}`);
+        });
+        console.log('-------');
+
+        console.log(extractedData.answers[extractedData.answers.length - 2]);
+        let combinedAnswer = '';
+        if (answerLenght) {
+          combinedAnswer = extractedData.answers[
+            extractedData.answers.length - 2
+          ].replace('Final Answer:', '');
+        } else {
+          combinedAnswer = extractedData.answers
+            .join('')
+            .replace('Final Answer:', ''); // Join with spaces
+        }
+
+        if (conversionId === '') {
           const result = await prisma.userConv.create({
             data: {
               userId: userId,
-              conversionId: responseConverId,
+              conversionId: converIdString,
               apiId: last10Chars,
               status: 'sending',
             },
           });
         }
-
-        const cleanAnswer = rawData.replace(/Final Answer: /g, '');
+        const cleanAnswer = combinedAnswer.replace(/Final Answer: /g, '');
         console.log('cleanAnswer');
         console.log(cleanAnswer);
 
+        if (cleanAnswer === '') {
+          const updatedRecord = await prisma.userConv.updateMany({
+            where: {
+              userId: userId,
+              apiId: last10Chars,
+            },
+            data: {
+              status: 'standby',
+            },
+          });
+
+          deleteChat(converIdString, userId);
+
+          return true;
+        }
         const data = {
           replyToken,
           messages: [
@@ -211,47 +284,77 @@ router.post(
   },
 );
 
-async function connectOpenAi(dataAI) {
+const LineReoky = async (data) => {
+  const Lineresponse = await axios.post(
+    'https://api.line.me/v2/bot/message/reply',
+    data,
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.accessToken}`,
+      },
+    },
+  );
+};
+
+async function connectDify(dataAI) {
   const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
-  const assistant_id = process.env.OPENAI_ASSISTANT_ID; // Ensure you have your API key stored in .env.local
   const data_raw = JSON.parse(dataAI);
-  let thread_id = '';
-  let compleatAnswer = '';
 
-  if (data_raw.conversionId === '') {
-    const thread = await openai.beta.threads.create();
-    thread_id = thread.id;
+  // Set up the headers
+  const headers = {
+    Authorization: `Bearer ${api_key}`,
+    'Content-Type': 'application/json',
+  };
+
+  let converId = data_raw.conversionId !== '' ? data_raw.conversionId : '';
+  // Hard-coded data
+  let data = '';
+  if (data_raw.files != '') {
+    data = {
+      inputs: {},
+      query: data_raw.message.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+      files: data_raw.files,
+    };
   } else {
-    thread_id = data_raw.conversionId;
+    data = {
+      inputs: {},
+      query: data_raw.message.trim(),
+      response_mode: 'streaming',
+      conversation_id: converId,
+      user: data_raw.userId,
+    };
   }
-  console.log(thread_id);
-  const message = await openai.beta.threads.messages.create(thread_id, {
-    role: 'user',
-    content: data_raw.message.trim(),
-  });
-  console.log('message');
-  console.log(message);
+  console.log(data);
 
-  let run = await openai.beta.threads.runs.createAndPoll(thread_id, {
-    assistant_id: assistant_id,
-    instructions: data_raw.message.trim(),
-  });
+  try {
+    const response = await axios.post(
+      'https://api.dify.ai/v1/chat-messages',
+      data,
+      { headers },
+    );
 
-  if (run.status === 'completed') {
-    const messages = await openai.beta.threads.messages.list(run.thread_id);
-    for (const message of messages.data.reverse()) {
-      if (message.role === 'assistant' && message.content[0].text.value) {
-        console.log('adding assistan response.......');
-        compleatAnswer = message.content[0].text.value;
-      }
-      // console.log(`${message.role} > ${message.content[0].text.value}`);
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    let status = 500;
+    let message = 'An error occurred while processing your request.';
+
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      status = error.response.status;
+      message = error.message;
+    } else if (error.request) {
+      // The request was made but no response was received
+      message = 'No response was received from the API.';
     }
-  } else {
-    console.log(run.status);
-  }
-  // console.log(compleatAnswer);
 
-  return { message: compleatAnswer, converId: thread_id };
+    return message;
+  }
 }
 
 function logRecursive(obj, depth = 0) {
@@ -277,5 +380,37 @@ function logRecursive(obj, depth = 0) {
     console.log(indent + obj);
   }
 }
+
+async function deleteChat(converId, userId) {
+  const api_key = process.env.DIFY_API_KEY; // Ensure you have your API key stored in .env.local
+
+  axios
+    .delete(`https://api.dify.ai/v1/conversations/${converId}`, {
+      headers: {
+        Authorization: `Bearer ${api_key}`,
+        'Content-Type': 'application/json',
+      },
+      data: {
+        user: userId,
+      },
+    })
+    .then(async (response) => {
+      await prisma.UserConv.deleteMany({
+        where: {
+          userId: userId, // Replace 'userId' with 'xx' or your specific value
+        },
+      });
+
+      console.log('Dify deleted');
+      console.log('Success:', response.data);
+    })
+    .catch((error) => {
+      console.error(
+        'Error:',
+        error.response ? error.response.data : error.message,
+      );
+    });
+}
+
 // export the router module so that server.js file can use it
 module.exports = router;
