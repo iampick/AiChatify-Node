@@ -172,8 +172,8 @@ router.post(
         }
 
         const cleanAnswer = rawData.replace(/Final Answer: /g, '');
-        console.log('cleanAnswer');
-        console.log(cleanAnswer);
+        console.log('replyToken');
+        console.log(replyToken);
 
         const data = {
           replyToken,
