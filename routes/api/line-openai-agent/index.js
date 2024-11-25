@@ -176,6 +176,9 @@ router.post(
             },
           ],
         };
+        console.log('data');
+        console.log(data);
+
         const Lineresponse = await axios.post(
           'https://api.line.me/v2/bot/message/reply',
           data,
@@ -195,6 +198,8 @@ router.post(
             status: 'standby',
           },
         });
+
+        console.log(updatedRecord);
       })
       .catch((error) => {
         console.log(error);
