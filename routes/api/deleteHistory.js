@@ -20,7 +20,9 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    await prisma.userConv.deleteMany();
+    await prisma.$executeRaw`
+    TRUNCATE TABLE "userConv" RESTART IDENTITY CASCADE;
+  `;
     return res
       .status(200)
       .json({ message: 'Chat history has been removed successfully' });
