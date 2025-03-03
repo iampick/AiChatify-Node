@@ -21,13 +21,17 @@ router.get('/', async (req, res) => {
   //trucate table userCov with try catch
   
   try {
-    await prisma.userConv.deleteMany();
+    // Using raw SQL truncate for better performance
+    await prisma.$executeRaw`TRUNCATE TABLE "UserConv" RESTART IDENTITY CASCADE`;
     return res
       .status(200)
-      .json({ message: 'Chat history has been removed successfully' });
+      .json({ message: 'All chat histories have been permanently cleared' });
   } catch (error) {
     console.error('Error truncating UserConv table:', error);
-    return res.status(500).json({ message: 'Internal Server Error' });
+    return res.status(500).json({ 
+      message: 'Failed to clear histories',
+      error: process.env.NODE_ENV === 'development' ? error.message : null
+    });
   }
 });
 
