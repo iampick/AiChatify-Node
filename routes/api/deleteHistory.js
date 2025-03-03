@@ -18,7 +18,8 @@ router.get('/', async (req, res) => {
       message: `Forbidden: Incorrect password`,
     });
   }
-
+  //trucate table userCov with try catch
+  
   try {
     await prisma.userConv.deleteMany();
     return res
