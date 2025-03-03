@@ -18,8 +18,7 @@ router.get('/', async (req, res) => {
       message: `Forbidden: Incorrect password`,
     });
   }
-  //trucate table userCov with try catch
-  
+
   try {
     // Using raw SQL truncate for better performance
     await prisma.$executeRaw`TRUNCATE TABLE "UserConv" RESTART IDENTITY CASCADE`;
